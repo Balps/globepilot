@@ -1,16 +1,16 @@
 # Core dependencies
 flask==3.0.0
-llama-index==0.12.5
-llama-index-core==0.12.5
-llama-index-tools-tavily-research==0.3.2
-llama-index-llms-openai==0.3.1
-llama-index-agent-openai==0.3.4
+llama-index>=0.10.0
+llama-index-llms-openai>=0.1.0
+llama-index-agent-openai>=0.1.0
 openai>=1.0.0
 httpx>=0.25.0
 python-dotenv==1.0.0
+tavily-python>=0.3.0
 
 # Production server
 gunicorn==21.2.0
 
-# Optional: Better logging and monitoring
-# sentry-sdk[flask]==1.32.0 
+# Additional dependencies for workflows
+asyncio-mqtt>=0.11.0
+pydantic>=2.0.0 
