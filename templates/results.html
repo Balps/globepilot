@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+{% block title %}Your Travel Plan - GlobePiloT{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Plan Status Header -->
+        <div class="card mb-4">
+            <div class="card-header text-center">
+                <h1><i class="fas fa-check-circle me-3"></i>Your Validated Travel Plan</h1>
+                {% if plan_approval.status %}
+                    <span class="status-badge status-{{ 'approved' if plan_approval.status == 'approved' else 'pending' }}">
+                        {% if plan_approval.status == 'approved' %}
+                            <i class="fas fa-check-circle me-1"></i>Plan Approved
+                        {% else %}
+                            <i class="fas fa-clock me-1"></i>{{ plan_approval.status|title }}
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
+            
+            {% if plan_approval.notes %}
+            <div class="card-body text-center">
+                <p class="mb-0">{{ plan_approval.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Itinerary -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3><i class="fas fa-route me-2"></i>Your Travel Itinerary</h3>
+            </div>
+            <div class="card-body">
+                {% if itinerary and itinerary != "No itinerary created" %}
+                    <div class="itinerary-content">
+                        {{ itinerary|replace('\n', '<br>')|safe }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Itinerary is still being created. Please check back in a moment.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Budget Analysis -->
+        {% if budget_analysis and budget_analysis != "No budget analysis available" %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-calculator me-2"></i>Budget Analysis</h4>
+                {% if budget_validation.result %}
+                    <span class="status-badge status-{{ 'approved' if 'within' in budget_validation.result.lower() else 'pending' }}">
+                        {{ budget_validation.result }}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="budget-content">
+                    {{ budget_analysis|replace('\n', '<br>')|safe }}
+                </div>
+                
+                {% if budget_validation.target_budget %}
+                <div class="alert alert-info mt-3">
+                    <strong><i class="fas fa-target me-2"></i>Target Budget:</strong> {{ budget_validation.target_budget }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Weather Information -->
+        {% if weather_info and weather_info != "No weather information available" %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-cloud-sun me-2"></i>Weather Information</h4>
+            </div>
+            <div class="card-body">
+                <div class="weather-content">
+                    {{ weather_info|replace('\n', '<br>')|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Document Requirements -->
+        {% if document_requirements and document_requirements != "No document requirements available" %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-passport me-2"></i>Document Requirements</h4>
+            </div>
+            <div class="card-body">
+                <div class="document-content">
+                    {{ document_requirements|replace('\n', '<br>')|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Packing Suggestions -->
+        {% if packing_suggestions and packing_suggestions != "No packing suggestions available" %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-suitcase me-2"></i>Packing Suggestions</h4>
+            </div>
+            <div class="card-body">
+                <div class="packing-content">
+                    {{ packing_suggestions|replace('\n', '<br>')|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Travel Notes Sections -->
+        {% if travel_notes %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-sticky-note me-2"></i>Detailed Research</h4>
+            </div>
+            <div class="card-body">
+                {% for category, notes in travel_notes.items() %}
+                    {% if notes %}
+                    <div class="mb-4">
+                        <h5 class="text-primary">
+                            {% if category == 'destination_research' %}
+                                <i class="fas fa-map-marked-alt me-2"></i>Destination Research
+                            {% elif category == 'budget_analysis' %}
+                                <i class="fas fa-chart-line me-2"></i>Budget Analysis
+                            {% elif category == 'transportation' %}
+                                <i class="fas fa-plane me-2"></i>Transportation Options
+                            {% elif category == 'weather' %}
+                                <i class="fas fa-thermometer-half me-2"></i>Weather Information
+                            {% elif category == 'packing' %}
+                                <i class="fas fa-suitcase me-2"></i>Packing Research
+                            {% elif category == 'documents' %}
+                                <i class="fas fa-passport me-2"></i>Document Research
+                            {% elif category == 'final_itinerary' %}
+                                <i class="fas fa-clipboard-check me-2"></i>Final Planning Notes
+                            {% else %}
+                                <i class="fas fa-info-circle me-2"></i>{{ category|title|replace('_', ' ') }}
+                            {% endif %}
+                        </h5>
+                        <div class="travel-requirement">
+                            {{ notes|replace('\n', '<br>')|safe }}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Validation Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-shield-alt me-2"></i>Validation Status</h5>
+            </div>
+            <div class="card-body">
+                {% if plan_approval.status %}
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-{{ 'check-circle text-success' if plan_approval.status == 'approved' else 'clock text-warning' }} me-2"></i>
+                        <span><strong>Plan Status:</strong> {{ plan_approval.status|title }}</span>
+                    </div>
+                {% endif %}
+                
+                {% if budget_validation.result %}
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-{{ 'check-circle text-success' if 'within' in budget_validation.result.lower() else 'exclamation-triangle text-warning' }} me-2"></i>
+                        <span><strong>Budget:</strong> {{ budget_validation.result }}</span>
+                    </div>
+                {% endif %}
+                
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-robot text-primary me-2"></i>
+                    <span><strong>AI Validation:</strong> Complete</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Revision Controls -->
+        {% if plan_approval.status == 'revision_needed' or (budget_validation.result and 'exceeded' in budget_validation.result.lower()) %}
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5><i class="fas fa-edit me-2"></i>Revision Required</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-warning mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Your travel plan needs revision to meet your requirements.
+                </p>
+                
+                <!-- Budget Adjustment Form -->
+                <form id="revisionForm" method="POST" action="{{ url_for('request_revision') }}">
+                    <div class="mb-3">
+                        <label for="new_budget" class="form-label">Adjust Budget Range</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="number" class="form-control" id="min_budget" name="min_budget" 
+                                       placeholder="Min Budget" min="0" step="100">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" class="form-control" id="max_budget" name="max_budget" 
+                                       placeholder="Max Budget" min="0" step="100">
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Leave blank to keep original budget</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="revision_notes" class="form-label">Additional Instructions</label>
+                        <textarea class="form-control" id="revision_notes" name="revision_notes" rows="3" 
+                                  placeholder="Any specific changes you'd like? (e.g., cheaper hotels, fewer activities, etc.)"></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-sync-alt me-2"></i>Request Revision
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="retryWithOriginal()">
+                            <i class="fas fa-redo me-2"></i>Retry with Original Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Quality Issues -->
+        {% if quality_issues %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>Quality Notes</h5>
+            </div>
+            <div class="card-body">
+                {% for issue in quality_issues %}
+                <div class="alert alert-{{ 'danger' if issue.severity == 'high' else 'warning' if issue.severity == 'medium' else 'info' }} mb-2">
+                    <strong>{{ issue.severity|title }}:</strong> {{ issue.description }}
+                    {% if issue.timestamp %}
+                        <br><small class="text-muted">{{ issue.timestamp }}</small>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Revision History -->
+        {% if revision_requests %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-history me-2"></i>Revision History</h5>
+            </div>
+            <div class="card-body">
+                {% for revision in revision_requests %}
+                <div class="mb-3 p-3 border rounded">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>{{ revision.agent }}</strong>
+                        <span class="badge bg-{{ 'success' if revision.status == 'completed' else 'warning' if revision.status == 'pending' else 'secondary' }}">
+                            {{ revision.status|title }}
+                        </span>
+                    </div>
+                    <p class="mb-1">{{ revision.request }}</p>
+                    {% if revision.timestamp %}
+                        <small class="text-muted">{{ revision.timestamp }}</small>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-cog me-2"></i>Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('index') }}" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-plus me-2"></i>Plan Another Trip
+                </a>
+                <button onclick="window.print()" class="btn btn-outline-secondary w-100 mb-2">
+                    <i class="fas fa-print me-2"></i>Print Itinerary
+                </button>
+                <button onclick="copyToClipboard()" class="btn btn-outline-info w-100">
+                    <i class="fas fa-copy me-2"></i>Copy to Clipboard
+                </button>
+            </div>
+        </div>
+        
+        <!-- Trip Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>Trip Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="trip-stats">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="fas fa-map-marker-alt me-1"></i>Destination:</span>
+                        <span class="text-end">From travel details</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="fas fa-calendar me-1"></i>Duration:</span>
+                        <span class="text-end">Based on dates</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><i class="fas fa-users me-1"></i>Travelers:</span>
+                        <span class="text-end">From form data</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-dollar-sign me-1"></i>Budget:</span>
+                        <span class="text-end">{{ budget_validation.target_budget or 'See analysis' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.itinerary-content, .budget-content, .weather-content {
+    line-height: 1.6;
+}
+
+.trip-stats {
+    font-size: 0.9rem;
+}
+
+@media print {
+    .card-header {
+        background: #f8f9fa !important;
+        color: #000 !important;
+    }
+    
+    .btn, .navbar, .footer {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+.status-badge {
+    font-size: 0.875rem;
+    margin-left: 10px;
+}
+
+.border {
+    border-color: #e5e7eb !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyToClipboard() {
+    // Get the itinerary content
+    const itinerary = document.querySelector('.itinerary-content');
+    const budget = document.querySelector('.budget-content');
+    const weather = document.querySelector('.weather-content');
+    
+    let content = "🌍 MY TRAVEL PLAN\n\n";
+    
+    if (itinerary) {
+        content += "📅 ITINERARY:\n";
+        content += itinerary.innerText + "\n\n";
+    }
+    
+    if (budget) {
+        content += "💰 BUDGET:\n";
+        content += budget.innerText + "\n\n";
+    }
+    
+    if (weather) {
+        content += "🌤️ WEATHER:\n";
+        content += weather.innerText + "\n\n";
+    }
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(content).then(function() {
+        // Show success message
+        const btn = document.querySelector('.btn-outline-info');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
+        btn.classList.remove('btn-outline-info');
+        btn.classList.add('btn-success');
+        
+        setTimeout(function() {
+            btn.innerHTML = originalText;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-info');
+        }, 2000);
+    });
+}
+
+function retryWithOriginal() {
+    if (confirm('This will restart planning with your original settings. Continue?')) {
+        // Simply redirect to the home page to start over
+        window.location.href = '{{ url_for("index") }}';
+    }
+}
+
+// Form validation for revision request
+document.getElementById('revisionForm')?.addEventListener('submit', function(e) {
+    const minBudget = document.getElementById('min_budget').value;
+    const maxBudget = document.getElementById('max_budget').value;
+    const notes = document.getElementById('revision_notes').value;
+    
+    // Validate budget range if provided
+    if (minBudget && maxBudget) {
+        if (parseInt(minBudget) >= parseInt(maxBudget)) {
+            e.preventDefault();
+            alert('Maximum budget must be greater than minimum budget.');
+            return false;
+        }
+        
+        if (parseInt(minBudget) <= 0) {
+            e.preventDefault();
+            alert('Budget must be greater than zero.');
+            return false;
+        }
+    }
+    
+    // Require either budget change or notes
+    if (!minBudget && !maxBudget && !notes.trim()) {
+        e.preventDefault();
+        alert('Please either adjust the budget or provide revision notes.');
+        return false;
+    }
+    
+    // Confirm revision
+    if (!confirm('This will start a new planning session with your updated requirements. Continue?')) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %} 

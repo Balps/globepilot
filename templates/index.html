@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Plan Your Trip - GlobePiloT{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <div class="card">
+            <div class="card-header text-center">
+                <h1><i class="fas fa-route me-3"></i>Plan Your Perfect Trip</h1>
+                <p class="mb-0 opacity-90">Let our AI agents create a validated travel plan just for you</p>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('plan_travel') }}" id="travelForm">
+                    <!-- Travel Details Section -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3"><i class="fas fa-map-marker-alt me-2"></i>Travel Details</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="origin" class="form-label">
+                                    <i class="fas fa-plane-departure me-1"></i>Starting Location *
+                                </label>
+                                <input type="text" class="form-control" id="origin" name="origin" 
+                                       placeholder="e.g., New York City, NY" required>
+                                <div class="form-text">City, State or City, Country</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="destination" class="form-label">
+                                    <i class="fas fa-plane-arrival me-1"></i>Destination *
+                                </label>
+                                <input type="text" class="form-control" id="destination" name="destination" 
+                                       placeholder="e.g., Paris, France" required>
+                                <div class="form-text">Where do you want to go?</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="departure_date" class="form-label">
+                                    <i class="fas fa-calendar-alt me-1"></i>Departure Date *
+                                </label>
+                                <input type="date" class="form-control" id="departure_date" name="departure_date" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="return_date" class="form-label">
+                                    <i class="fas fa-calendar-check me-1"></i>Return Date *
+                                </label>
+                                <input type="date" class="form-control" id="return_date" name="return_date" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Budget Section -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3"><i class="fas fa-dollar-sign me-2"></i>Budget Range</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="budget_min" class="form-label">
+                                    <i class="fas fa-money-bill-wave me-1"></i>Minimum Budget *
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="budget_min" name="budget_min" 
+                                           placeholder="1000" min="100" step="100" required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="budget_max" class="form-label">
+                                    <i class="fas fa-money-check-alt me-1"></i>Maximum Budget *
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="budget_max" name="budget_max" 
+                                           placeholder="5000" min="100" step="100" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Our AI will validate your budget and request revisions if costs exceed your range.
+                        </div>
+                    </div>
+                    
+                    <!-- Trip Preferences Section -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3"><i class="fas fa-cog me-2"></i>Trip Preferences</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="travelers" class="form-label">
+                                    <i class="fas fa-users me-1"></i>Number of Travelers
+                                </label>
+                                <select class="form-select" id="travelers" name="travelers">
+                                    <option value="1" selected>1 Person</option>
+                                    <option value="2">2 People</option>
+                                    <option value="3">3 People</option>
+                                    <option value="4">4 People</option>
+                                    <option value="5">5+ People</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="trip_type" class="form-label">
+                                    <i class="fas fa-suitcase me-1"></i>Trip Type
+                                </label>
+                                <select class="form-select" id="trip_type" name="trip_type">
+                                    <option value="leisure" selected>Leisure / Vacation</option>
+                                    <option value="business">Business Travel</option>
+                                    <option value="romantic">Romantic Getaway</option>
+                                    <option value="family">Family Trip</option>
+                                    <option value="adventure">Adventure / Outdoor</option>
+                                    <option value="cultural">Cultural Exploration</option>
+                                    <option value="luxury">Luxury Travel</option>
+                                    <option value="budget">Budget Backpacking</option>
+                                    <option value="wellness">Wellness / Spa</option>
+                                    <option value="solo">Solo Travel</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Special Requirements Section -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3"><i class="fas fa-list-ul me-2"></i>Special Requirements</h5>
+                        
+                        <label for="special_requirements" class="form-label">
+                            <i class="fas fa-edit me-1"></i>Additional Preferences (Optional)
+                        </label>
+                        <textarea class="form-control" id="special_requirements" name="special_requirements" 
+                                  rows="4" placeholder="Tell us about any special requirements...
+
+Examples:
+• Dietary restrictions (vegetarian, gluten-free, etc.)
+• Accessibility needs
+• Preferred accommodations (5-star hotels, boutique hotels, hostels)
+• Activities of interest (museums, hiking, nightlife, shopping)
+• Travel pace (relaxed, moderate, packed)
+• Language preferences
+• Cultural interests"></textarea>
+                        <div class="form-text">
+                            The more details you provide, the better our AI agents can tailor your trip!
+                        </div>
+                    </div>
+                    
+                    <!-- AI Features Info -->
+                    <div class="alert alert-primary mb-4">
+                        <h6><i class="fas fa-robot me-2"></i>What Our AI Agents Will Do:</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-check text-success me-2"></i>Research destinations & attractions</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Analyze costs & create budget breakdown</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Find optimal transportation options</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Check weather & provide packing tips</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-check text-success me-2"></i>Create detailed day-by-day itinerary</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Validate budget compliance</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Quality control & revisions</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Final plan approval</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="fas fa-magic me-2"></i>Create My Travel Plan
+                        </button>
+                        <div class="mt-2 text-muted">
+                            <small><i class="fas fa-clock me-1"></i>This usually takes 2-5 minutes</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Examples -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Quick Examples</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="travel-requirement">
+                            <strong>Weekend Getaway</strong><br>
+                            <small class="text-muted">San Francisco → Los Angeles<br>$800-1,200 budget</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="travel-requirement">
+                            <strong>European Adventure</strong><br>
+                            <small class="text-muted">New York → Paris<br>$3,000-5,000 budget</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="travel-requirement">
+                            <strong>Luxury Escape</strong><br>
+                            <small class="text-muted">Miami → Tokyo<br>$8,000-12,000 budget</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('departure_date').min = today;
+    
+    // Update return date minimum when departure date changes
+    document.getElementById('departure_date').addEventListener('change', function() {
+        document.getElementById('return_date').min = this.value;
+    });
+    
+    // Validate budget range
+    document.getElementById('budget_min').addEventListener('input', validateBudget);
+    document.getElementById('budget_max').addEventListener('input', validateBudget);
+    
+    function validateBudget() {
+        const minBudget = parseInt(document.getElementById('budget_min').value) || 0;
+        const maxBudget = parseInt(document.getElementById('budget_max').value) || 0;
+        
+        if (minBudget && maxBudget && minBudget >= maxBudget) {
+            document.getElementById('budget_max').setCustomValidity('Maximum budget must be greater than minimum budget');
+        } else {
+            document.getElementById('budget_max').setCustomValidity('');
+        }
+    }
+    
+    // Form submission loading state
+    document.getElementById('travelForm').addEventListener('submit', function() {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Your Travel Plan...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %} 

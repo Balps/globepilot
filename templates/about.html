@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}About GlobePiloT - AI Travel Planning{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header text-center">
+                <h1><i class="fas fa-info-circle me-3"></i>About GlobePiloT</h1>
+                <p class="mb-0 opacity-90">The future of AI-powered travel planning</p>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h3 class="text-primary mb-3">What is GlobePiloT?</h3>
+                        <p class="lead">
+                            GlobePiloT is an advanced AI-powered travel planning system that uses multiple specialized 
+                            agents to create comprehensive, validated travel itineraries tailored to your exact needs.
+                        </p>
+                        
+                        <p>
+                            Unlike traditional travel booking sites, GlobePiloT employs a sophisticated multi-agent 
+                            architecture where each AI agent has a specific role - from destination research to budget 
+                            validation. This ensures every aspect of your trip is thoroughly researched, validated, 
+                            and approved before being presented to you.
+                        </p>
+                        
+                        <hr class="section-divider">
+                        
+                        <h3 class="text-primary mb-3">How It Works</h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-robot me-2 text-primary"></i>Planning Agents</h5>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <div class="icon-wrapper d-inline-flex">
+                                            <i class="fas fa-map-marked-alt"></i>
+                                        </div>
+                                        <strong>Destination Research Agent</strong><br>
+                                        <small class="text-muted">Researches attractions, activities, and local insights</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <div class="icon-wrapper d-inline-flex">
+                                            <i class="fas fa-calculator"></i>
+                                        </div>
+                                        <strong>Budget Analysis Agent</strong><br>
+                                        <small class="text-muted">Analyzes costs and creates detailed budget breakdowns</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <div class="icon-wrapper d-inline-flex">
+                                            <i class="fas fa-plane"></i>
+                                        </div>
+                                        <strong>Transportation Agent</strong><br>
+                                        <small class="text-muted">Finds optimal flights and local transportation options</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <div class="icon-wrapper d-inline-flex">
+                                            <i class="fas fa-cloud-sun"></i>
+                                        </div>
+                                        <strong>Weather Agent</strong><br>
+                                        <small class="text-muted">Provides weather forecasts and packing recommendations</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <div class="icon-wrapper d-inline-flex">
+                                            <i class="fas fa-route"></i>
+                                        </div>
+                                        <strong>Travel Planner Agent</strong><br>
+                                        <small class="text-muted">Creates comprehensive day-by-day itineraries</small>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-shield-alt me-2 text-success"></i>Validation Agents</h5>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <div class="icon-wrapper d-inline-flex">
+                                            <i class="fas fa-check-circle"></i>
+                                        </div>
+                                        <strong>Validation Agent</strong><br>
+                                        <small class="text-muted">Ensures budget compliance and requirement adherence</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <div class="icon-wrapper d-inline-flex">
+                                            <i class="fas fa-cogs"></i>
+                                        </div>
+                                        <strong>Quality Control Agent</strong><br>
+                                        <small class="text-muted">Manages revisions and ensures plan excellence</small>
+                                    </li>
+                                </ul>
+                                
+                                <div class="alert alert-success mt-3">
+                                    <h6><i class="fas fa-magic me-2"></i>Intelligent Validation</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        <li><i class="fas fa-check text-success me-2"></i>Budget compliance checking</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Requirements validation</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Multi-cycle revision system</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Quality assurance</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="section-divider">
+                        
+                        <h3 class="text-primary mb-3">Key Features</h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="travel-requirement mb-3">
+                                    <h6><i class="fas fa-brain me-2"></i>AI-Powered Research</h6>
+                                    <p class="mb-0">Real-time web search for current prices, weather, and availability</p>
+                                </div>
+                                
+                                <div class="travel-requirement mb-3">
+                                    <h6><i class="fas fa-shield-alt me-2"></i>Budget Validation</h6>
+                                    <p class="mb-0">Automatic budget compliance checking with revision requests</p>
+                                </div>
+                                
+                                <div class="travel-requirement mb-3">
+                                    <h6><i class="fas fa-sync-alt me-2"></i>Multi-Cycle Refinement</h6>
+                                    <p class="mb-0">Up to 3 revision cycles to perfect your travel plan</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="travel-requirement mb-3">
+                                    <h6><i class="fas fa-calendar-alt me-2"></i>Comprehensive Planning</h6>
+                                    <p class="mb-0">Day-by-day itineraries with weather-appropriate activities</p>
+                                </div>
+                                
+                                <div class="travel-requirement mb-3">
+                                    <h6><i class="fas fa-check-double me-2"></i>Quality Assurance</h6>
+                                    <p class="mb-0">Professional-grade validation ensures plan excellence</p>
+                                </div>
+                                
+                                <div class="travel-requirement mb-3">
+                                    <h6><i class="fas fa-mobile-alt me-2"></i>Modern Interface</h6>
+                                    <p class="mb-0">Beautiful, responsive web interface with real-time progress</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="section-divider">
+                        
+                        <h3 class="text-primary mb-3">Technology Stack</h3>
+                        <p>
+                            GlobePiloT is built using cutting-edge AI and web technologies:
+                        </p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-robot text-primary me-2"></i><strong>OpenAI GPT-4:</strong> Advanced language models for intelligent planning</li>
+                                    <li><i class="fas fa-search text-primary me-2"></i><strong>Tavily Search:</strong> Real-time web search for current information</li>
+                                    <li><i class="fas fa-cogs text-primary me-2"></i><strong>LlamaIndex:</strong> Multi-agent workflow orchestration</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-code text-primary me-2"></i><strong>Flask:</strong> Modern Python web framework</li>
+                                    <li><i class="fas fa-mobile-alt text-primary me-2"></i><strong>Bootstrap:</strong> Responsive, mobile-first design</li>
+                                    <li><i class="fas fa-sync-alt text-primary me-2"></i><strong>Real-time Updates:</strong> Live progress tracking</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-header">
+                                <h5><i class="fas fa-lightbulb me-2"></i>Why Choose GlobePiloT?</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>Intelligent</h6>
+                                    <small>AI agents that understand context and preferences</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>Comprehensive</h6>
+                                    <small>Every aspect researched and validated</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>Reliable</h6>
+                                    <small>Budget compliance and quality control</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>Current</h6>
+                                    <small>Real-time web search for latest information</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>Personalized</h6>
+                                    <small>Tailored to your specific needs and preferences</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-question-circle me-2"></i>How to Use</h5>
+                            </div>
+                            <div class="card-body">
+                                <ol class="list-group list-group-numbered">
+                                    <li class="list-group-item">Fill out the travel planning form</li>
+                                    <li class="list-group-item">Watch AI agents work in real-time</li>
+                                    <li class="list-group-item">Review your validated travel plan</li>
+                                    <li class="list-group-item">Print or copy your itinerary</li>
+                                    <li class="list-group-item">Enjoy your perfectly planned trip!</li>
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket me-2"></i>Start Planning Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
