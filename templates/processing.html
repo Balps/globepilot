@@ -24,16 +24,29 @@
                 </p>
             </div>
             <div class="card-body p-4">
-                <!-- Progress Bar -->
-                <div class="mb-4">
-                    <div class="progress mb-3">
+                <!-- Enhanced Progress Bar -->
+                <div class="progress-container mb-4">
+                    <div class="progress mb-3" style="height: 30px;">
                         <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 0%" id="progressBar">
+                             role="progressbar" style="width: 0%" 
+                             id="progressBar"
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <span id="progress-text" class="fw-bold">Starting...</span>
                         </div>
                     </div>
-                    <div class="text-center">
+                    
+                    <!-- Current Agent Status -->
+                    <div class="text-center mb-3">
                         <h5 id="statusText" class="text-primary">Initializing AI agents...</h5>
                         <p id="statusDetail" class="text-muted">Getting ready to start your travel planning</p>
+                    </div>
+                    
+                    <!-- Time Remaining Display -->
+                    <div class="text-center mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Estimated time remaining: <span id="time-remaining">2-3 minutes</span>
+                        </small>
                     </div>
                 </div>
                 
@@ -41,42 +54,113 @@
                 <div class="row">
                     <div class="col-md-6">
                         <h6 class="text-primary mb-3"><i class="fas fa-robot me-2"></i>Planning Agents</h6>
-                        <div class="agent-status" id="agents-planning">
-                            <div class="d-flex align-items-center mb-2" id="agent-general">
-                                <i class="fas fa-circle text-muted me-2" id="icon-general"></i>
-                                <span>General Research Agent</span>
+                        <div class="agent-status-list" id="agents-planning">
+                            <div class="agent-item" id="agent-general" data-agent="GeneralResearchAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-search agent-icon me-2"></i>
+                                    <span class="agent-name">General Research</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Researching destination basics & safety</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-accommodations">
-                                <i class="fas fa-circle text-muted me-2" id="icon-accommodations"></i>
-                                <span>Accommodations Agent</span>
+                            
+                            <div class="agent-item" id="agent-weather" data-agent="WeatherAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-cloud-sun agent-icon me-2"></i>
+                                    <span class="agent-name">Weather Analysis</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Checking weather & packing tips</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-activities">
-                                <i class="fas fa-circle text-muted me-2" id="icon-activities"></i>
-                                <span>Activities Agent</span>
+                            
+                            <div class="agent-item" id="agent-flight" data-agent="FlightAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-plane agent-icon me-2"></i>
+                                    <span class="agent-name">Flight Research</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Optimizing flight options</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-events">
-                                <i class="fas fa-circle text-muted me-2" id="icon-events"></i>
-                                <span>Local Events Agent</span>
+                            
+                            <div class="agent-item" id="agent-accommodations" data-agent="AccommodationsAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-bed agent-icon me-2"></i>
+                                    <span class="agent-name">Accommodations</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Finding best places to stay</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-budget">
-                                <i class="fas fa-circle text-muted me-2" id="icon-budget"></i>
-                                <span>Budget Analysis Agent</span>
+                            
+                            <div class="agent-item" id="agent-budget" data-agent="BudgetAnalysisAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-calculator agent-icon me-2"></i>
+                                    <span class="agent-name">Budget Analysis</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Calculating costs & optimization</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-flight">
-                                <i class="fas fa-circle text-muted me-2" id="icon-flight"></i>
-                                <span>Flight Agent</span>
+                            
+                            <div class="agent-item" id="agent-activities" data-agent="ActivitiesAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-map-signs agent-icon me-2"></i>
+                                    <span class="agent-name">Activities</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Discovering attractions & tours</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-transport">
-                                <i class="fas fa-circle text-muted me-2" id="icon-transport"></i>
-                                <span>Local Transportation Agent</span>
+                            
+                            <div class="agent-item" id="agent-events" data-agent="LocalEventsAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-calendar-check agent-icon me-2"></i>
+                                    <span class="agent-name">Local Events</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Finding restaurants & events</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-weather">
-                                <i class="fas fa-circle text-muted me-2" id="icon-weather"></i>
-                                <span>Weather Agent</span>
+                            
+                            <div class="agent-item" id="agent-transport" data-agent="LocalTransportationAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-subway agent-icon me-2"></i>
+                                    <span class="agent-name">Transportation</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Planning local transport</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-planner">
-                                <i class="fas fa-circle text-muted me-2" id="icon-planner"></i>
-                                <span>Travel Planner Agent</span>
+                            
+                            <div class="agent-item" id="agent-planner" data-agent="TravelPlannerAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-route agent-icon me-2"></i>
+                                    <span class="agent-name">Travel Planner</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Creating detailed itinerary</div>
                             </div>
                         </div>
                     </div>
@@ -238,100 +322,148 @@ function addLogEntry(message, type = 'info') {
     log.scrollTop = log.scrollHeight;
 }
 
+// Enhanced progress tracking functions
+let lastActiveAgent = null;
+let lastCompletedAgents = [];
+
+function updateProgressDisplay(percentage, statusText, timeRemaining) {
+    // Update progress bar
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progress-text');
+    
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+    }
+    
+    if (progressText) {
+        progressText.textContent = Math.round(percentage) + '% Complete';
+    }
+    
+    // Update status text
+    const statusTextElement = document.getElementById('statusText');
+    if (statusTextElement) {
+        statusTextElement.textContent = statusText;
+    }
+    
+    // Update time remaining
+    const timeRemainingElement = document.getElementById('time-remaining');
+    if (timeRemainingElement && timeRemaining !== undefined) {
+        timeRemainingElement.textContent = formatTimeRemaining(timeRemaining);
+    }
+}
+
+function updateAgentStatus(currentAgent, completedAgents, currentAgentInfo) {
+    // Reset all agents to default state
+    const agentItems = document.querySelectorAll('.agent-item');
+    agentItems.forEach(item => {
+        item.classList.remove('active', 'completed');
+    });
+    
+    const statusIcons = document.querySelectorAll('.status-icon');
+    statusIcons.forEach(icon => {
+        icon.classList.add('d-none');
+    });
+    
+    // Mark completed agents
+    completedAgents.forEach(agent => {
+        const agentElement = document.querySelector(`.agent-item[data-agent="${agent}"]`);
+        if (agentElement) {
+            agentElement.classList.add('completed');
+            const completeIcon = agentElement.querySelector('.complete-icon');
+            if (completeIcon) {
+                completeIcon.classList.remove('d-none');
+            }
+        }
+    });
+    
+    // Mark current active agent
+    if (currentAgent) {
+        const currentAgentElement = document.querySelector(`.agent-item[data-agent="${currentAgent}"]`);
+        if (currentAgentElement) {
+            currentAgentElement.classList.add('active');
+            const activeIcon = currentAgentElement.querySelector('.active-icon');
+            if (activeIcon) {
+                activeIcon.classList.remove('d-none');
+            }
+        }
+        
+        // Update status detail with current agent description
+        if (currentAgentInfo && currentAgentInfo.description) {
+            const statusDetail = document.getElementById('statusDetail');
+            if (statusDetail) {
+                statusDetail.textContent = currentAgentInfo.description;
+            }
+        }
+    }
+}
+
+function formatTimeRemaining(minutes) {
+    if (minutes === 0) return "Almost done!";
+    if (minutes < 1) return "Less than 1 minute";
+    if (minutes < 2) return "About 1 minute";
+    return `About ${Math.round(minutes)} minutes`;
+}
+
 function checkStatus() {
     fetch('/status')
         .then(response => response.json())
         .then(data => {
             if (data.is_processing) {
-                // Update progress based on time elapsed and status
-                const elapsed = (Date.now() - startTime) / 1000;
-                let progress = Math.min(90, elapsed * 2); // Rough progress based on time
+                // Use enhanced progress tracking from backend
+                const progress = data.progress_percentage || 0;
+                const timeRemaining = data.time_remaining_minutes || 0;
+                const currentAgent = data.current_agent;
+                const completedAgents = data.completed_agents || [];
+                const currentAgentInfo = data.current_agent_info;
                 
-                updateProgress(progress, data.progress || steps[currentStep], 
-                             `Processing for ${Math.round(elapsed)} seconds...`);
+                // Update progress bar with actual percentage
+                updateProgressDisplay(progress, data.progress || 'Processing...', timeRemaining);
                 
-                // Simulate agent activation based on progress
-                if (progress > 10 && currentStep < 1) {
-                    currentStep = 1;
-                    activateAgent('GeneralResearchAgent');
-                    addLogEntry('General Research Agent started');
+                // Update agent status based on backend data
+                updateAgentStatus(currentAgent, completedAgents, currentAgentInfo);
+                
+                // Add log entries for agent changes
+                if (currentAgent && currentAgent !== lastActiveAgent) {
+                    const agentName = currentAgentInfo ? currentAgentInfo.name : currentAgent;
+                    const agentDesc = currentAgentInfo ? currentAgentInfo.description : 'Working on your travel plan';
+                    addLogEntry(`${agentName} is now active: ${agentDesc}`);
+                    lastActiveAgent = currentAgent;
                 }
-                if (progress > 25 && currentStep < 2) {
-                    currentStep = 2;
-                    completeAgent('GeneralResearchAgent');
-                    activateAgent('AccommodationsAgent');
-                    addLogEntry('Accommodations Agent started');
-                }
-                if (progress > 40 && currentStep < 3) {
-                    currentStep = 3;
-                    completeAgent('AccommodationsAgent');
-                    activateAgent('ActivitiesAgent');
-                    addLogEntry('Activities Agent started');
-                }
-                if (progress > 55 && currentStep < 4) {
-                    currentStep = 4;
-                    completeAgent('ActivitiesAgent');
-                    activateAgent('LocalEventsAgent');
-                    addLogEntry('Local Events Agent started');
-                }
-                if (progress > 65 && currentStep < 5) {
-                    currentStep = 5;
-                    completeAgent('LocalEventsAgent');
-                    activateAgent('BudgetAnalysisAgent');
-                    addLogEntry('Budget Analysis Agent started');
-                }
-                if (progress > 70 && currentStep < 6) {
-                    currentStep = 6;
-                    completeAgent('BudgetAnalysisAgent');
-                    activateAgent('FlightAgent');
-                    addLogEntry('Flight Agent started');
-                }
-                if (progress > 80 && currentStep < 7) {
-                    currentStep = 7;
-                    completeAgent('FlightAgent');
-                    activateAgent('LocalTransportationAgent');
-                    addLogEntry('Local Transportation Agent started');
-                }
-                if (progress > 90 && currentStep < 8) {
-                    currentStep = 8;
-                    completeAgent('LocalTransportationAgent');
-                    activateAgent('WeatherAgent');
-                    addLogEntry('Weather Agent started');
-                }
-                if (progress > 95 && currentStep < 9) {
-                    currentStep = 9;
-                    completeAgent('WeatherAgent');
-                    activateAgent('TravelPlannerAgent');
-                    addLogEntry('Travel Planner Agent started');
-                }
-                if (progress > 98 && currentStep < 10) {
-                    currentStep = 10;
-                    completeAgent('TravelPlannerAgent');
-                    activateAgent('ValidationAgent');
-                    addLogEntry('Validation Agent checking budget compliance');
-                }
-                if (progress > 99 && currentStep < 11) {
-                    currentStep = 11;
-                    completeAgent('ValidationAgent');
-                    activateAgent('QualityControlAgent');
-                    addLogEntry('Quality Control Agent reviewing plan');
-                }
+                
+                // Log completed agents
+                completedAgents.forEach(agent => {
+                    if (!lastCompletedAgents.includes(agent)) {
+                        const agentInfo = data.agent_config ? data.agent_config[agent] : null;
+                        const agentName = agentInfo ? agentInfo.name : agent;
+                        addLogEntry(`✅ ${agentName} completed successfully`, 'success');
+                        lastCompletedAgents.push(agent);
+                    }
+                });
                 
             } else {
                 // Processing complete
                 clearInterval(checkInterval);
                 
                 if (data.results) {
-                    updateProgress(100, 'Complete!', 'Redirecting to your travel plan...');
-                    addLogEntry('Travel plan created successfully!', 'success');
+                    updateProgressDisplay(100, 'Complete!', 0);
+                    addLogEntry('🎉 Travel plan created successfully!', 'success');
                     
                     // Mark all agents as complete
-                    Object.values(agentMapping).forEach(agentKey => {
-                        const icon = document.getElementById('icon-' + agentKey);
-                        if (icon) {
-                            icon.className = 'fas fa-check-circle text-success me-2';
-                            icon.style.animation = 'none';
-                        }
+                    const allAgentItems = document.querySelectorAll('.agent-item');
+                    allAgentItems.forEach(item => {
+                        item.classList.remove('active');
+                        item.classList.add('completed');
+                    });
+                    
+                    const allActiveIcons = document.querySelectorAll('.active-icon');
+                    allActiveIcons.forEach(icon => {
+                        icon.classList.add('d-none');
+                    });
+                    
+                    const allCompleteIcons = document.querySelectorAll('.complete-icon');
+                    allCompleteIcons.forEach(icon => {
+                        icon.classList.remove('d-none');
                     });
                     
                     // Redirect to results after a short delay
@@ -339,14 +471,14 @@ function checkStatus() {
                         window.location.href = '/results';
                     }, 2000);
                 } else {
-                    updateProgress(100, 'Error occurred', data.progress || 'Please try again');
-                    addLogEntry('Error: ' + (data.progress || 'Unknown error'), 'error');
+                    updateProgressDisplay(100, 'Error occurred', 0);
+                    addLogEntry('❌ Error: ' + (data.progress || 'Unknown error'), 'error');
                 }
             }
         })
         .catch(error => {
             console.error('Status check failed:', error);
-            addLogEntry('Status check failed: ' + error.message, 'error');
+            addLogEntry('⚠️ Status check failed: ' + error.message, 'error');
         });
 }
 
@@ -368,4 +500,139 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 </script>
+{% endblock %} 
+
+{% block extra_css %}
+<style>
+/* Enhanced Progress Tracking Styles */
+.progress-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.progress {
+    background-color: #f0f0f0;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+/* Enhanced Agent Status Styles */
+.agent-item {
+    padding: 12px 15px;
+    margin: 8px 0;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.agent-item.active {
+    background: #e3f2fd;
+    border-left-color: #2196f3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+    transform: translateX(2px);
+}
+
+.agent-item.completed {
+    background: #e8f5e8;
+    border-left-color: #4caf50;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.agent-icon {
+    width: 20px;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.agent-item.active .agent-icon {
+    color: #2196f3;
+}
+
+.agent-item.completed .agent-icon {
+    color: #4caf50;
+}
+
+.agent-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.agent-item.active .agent-name {
+    color: #1976d2;
+    font-weight: 600;
+}
+
+.agent-item.completed .agent-name {
+    color: #388e3c;
+}
+
+.agent-description {
+    margin-top: 4px;
+    margin-left: 32px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.agent-status-icons {
+    min-width: 20px;
+}
+
+.status-icon {
+    font-size: 16px;
+}
+
+/* Animation for active agents */
+.agent-item.active {
+    animation: pulse-agent 2s infinite;
+}
+
+@keyframes pulse-agent {
+    0% { transform: translateX(2px); }
+    50% { transform: translateX(4px); }
+    100% { transform: translateX(2px); }
+}
+
+/* Time remaining styling */
+#time-remaining {
+    font-weight: 600;
+    color: #007bff;
+}
+
+/* Processing log enhancements */
+#processingLog {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .agent-item {
+        padding: 10px 12px;
+    }
+    
+    .agent-description {
+        margin-left: 28px;
+        font-size: 0.8rem;
+    }
+    
+    .progress-container {
+        padding: 15px;
+    }
+}
+</style>
 {% endblock %} 

@@ -11,6 +11,10 @@ import time
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 import logging
+import re
+import io
+import sys
+from contextlib import redirect_stdout, redirect_stderr
 
 # Load environment variables from .env file if it exists
 try:
@@ -102,25 +106,317 @@ def validate_budget_realistic(origin, destination, min_budget, max_budget):
 latest_results = {}
 processing_status = {"is_processing": False, "progress": "", "results": None}
 
+# ============================================================================
+# ENHANCED PROGRESS TRACKING SYSTEM
+# ============================================================================
+
+# Global tracking variables
+workflow_tracker = {
+    "start_time": None,
+    "current_agent": None,
+    "completed_agents": [],
+    "total_agents": 11,  # Updated to reflect all 11 agents in the workflow
+    "current_agent_index": 0,
+    "api_calls_current_agent": 0,
+    "total_events": 0
+}
+
+# Agent configuration with icons and descriptions
+AGENT_CONFIG = {
+    "GeneralResearchAgent": {
+        "icon": "fas fa-search",
+        "name": "General Research",
+        "description": "Researching destination basics & safety",
+        "index": 0
+    },
+    "WeatherAgent": {
+        "icon": "fas fa-cloud-sun",
+        "name": "Weather Analysis",
+        "description": "Checking weather & packing tips",
+        "index": 1
+    },
+    "FlightAgent": {
+        "icon": "fas fa-plane",
+        "name": "Flight Research",
+        "description": "Optimizing flight options",
+        "index": 2
+    },
+    "AccommodationsAgent": {
+        "icon": "fas fa-bed", 
+        "name": "Accommodations",
+        "description": "Finding best places to stay",
+        "index": 3
+    },
+    "BudgetAnalysisAgent": {
+        "icon": "fas fa-calculator",
+        "name": "Budget Analysis",
+        "description": "Calculating costs & optimization",
+        "index": 4
+    },
+    "ActivitiesAgent": {
+        "icon": "fas fa-map-signs",
+        "name": "Activities", 
+        "description": "Discovering attractions & tours",
+        "index": 5
+    },
+    "LocalEventsAgent": {
+        "icon": "fas fa-calendar-check",
+        "name": "Local Events",
+        "description": "Finding restaurants & events",
+        "index": 6
+    },
+    "LocalTransportationAgent": {
+        "icon": "fas fa-subway",
+        "name": "Transportation",
+        "description": "Planning local transport",
+        "index": 7
+    },
+    "TravelPlannerAgent": {
+        "icon": "fas fa-route",
+        "name": "Travel Planner",
+        "description": "Creating detailed itinerary",
+        "index": 8
+    },
+    "ValidationAgent": {
+        "icon": "fas fa-check-circle",
+        "name": "Validation",
+        "description": "Verifying plan quality",
+        "index": 9
+    },
+    "QualityControlAgent": {
+        "icon": "fas fa-award",
+        "name": "Quality Control",
+        "description": "Final quality assurance",
+        "index": 10
+    }
+}
+
+def calculate_progress_percentage():
+    """Calculate overall progress percentage based on agent completion and activity"""
+    if workflow_tracker["total_agents"] == 0:
+        return 0
+    
+    # Base progress on completed agents (each agent = ~14.3%)
+    agent_weight = 100 / workflow_tracker["total_agents"]
+    completed_progress = len(workflow_tracker["completed_agents"]) * agent_weight
+    
+    # Add progress for current agent (estimate based on time and activity)
+    if workflow_tracker["current_agent"]:
+        # Estimate current agent progress based on time spent
+        if workflow_tracker["start_time"]:
+            elapsed = (time.time() - workflow_tracker["start_time"]) / 60  # minutes
+            # Add some progress for current agent based on time (more realistic)
+            current_agent_progress = min(agent_weight * 0.7, elapsed * 5)  # 5% per minute max
+            completed_progress += current_agent_progress
+    
+    # Use time-based progress if no agents tracked yet
+    if not workflow_tracker["current_agent"] and not workflow_tracker["completed_agents"]:
+        if workflow_tracker["start_time"]:
+            elapsed = (time.time() - workflow_tracker["start_time"]) / 60
+            # Provide steady progress based on time (typical workflow takes 3-5 minutes)
+            time_progress = min(85, elapsed * 20)  # 20% per minute, cap at 85%
+            return time_progress
+    
+    return min(completed_progress, 95)  # Cap at 95% until fully complete
+
+def estimate_time_remaining():
+    """Estimate remaining time based on progress and elapsed time"""
+    if not workflow_tracker["start_time"]:
+        return 2.5
+    
+    elapsed_minutes = (time.time() - workflow_tracker["start_time"]) / 60
+    progress_ratio = calculate_progress_percentage() / 100
+    
+    if progress_ratio > 0.1:  # Only estimate after some progress
+        estimated_total = elapsed_minutes / progress_ratio
+        remaining = max(0, estimated_total - elapsed_minutes)
+        return round(remaining, 1)
+    
+    # Default estimates based on current progress
+    if progress_ratio < 0.2:
+        return 2.0
+    elif progress_ratio < 0.5:
+        return 1.5
+    elif progress_ratio < 0.8:
+        return 1.0
+    else:
+        return 0.5
+
+def update_agent_progress(agent_name, event_type="activity"):
+    """Update progress tracking when agent changes or events occur"""
+    global workflow_tracker
+    
+    if agent_name and agent_name != workflow_tracker["current_agent"]:
+        # Agent changed - mark previous as complete
+        if workflow_tracker["current_agent"] and workflow_tracker["current_agent"] not in workflow_tracker["completed_agents"]:
+            workflow_tracker["completed_agents"].append(workflow_tracker["current_agent"])
+        
+        # Set new current agent
+        workflow_tracker["current_agent"] = agent_name
+        workflow_tracker["current_agent_index"] = AGENT_CONFIG.get(agent_name, {}).get("index", 0)
+        workflow_tracker["api_calls_current_agent"] = 0
+    
+    # Track activity for current agent
+    if event_type == "api_call":
+        workflow_tracker["api_calls_current_agent"] += 1
+    
+    workflow_tracker["total_events"] += 1
+
+def reset_workflow_tracker():
+    """Reset progress tracking for new workflow"""
+    global workflow_tracker
+    workflow_tracker = {
+        "start_time": time.time(),
+        "current_agent": None,
+        "completed_agents": [],
+        "total_agents": 11,  # Updated to reflect all 11 agents in the workflow
+        "current_agent_index": 0,
+        "api_calls_current_agent": 0,
+        "total_events": 0
+    }
+
+def workflow_progress_callback(event_type, data):
+    """Callback function to receive real-time progress updates from the workflow"""
+    global workflow_tracker
+    
+    if event_type in ["agent_change", "workflow_start"]:
+        # Update tracker with real agent data from workflow
+        workflow_tracker["current_agent"] = data["current_agent"]
+        workflow_tracker["completed_agents"] = data["completed_agents"].copy()
+        workflow_tracker["api_calls_current_agent"] = data["api_calls"]
+        workflow_tracker["total_events"] = data["event_count"]
+        
+        event_label = "started" if event_type == "workflow_start" else "active"
+        print(f"📊 Flask Progress Update: {data['current_agent']} {event_label}, {len(data['completed_agents'])} completed")
+
+class ProgressCapturingLogger:
+    """Captures workflow log output to track agent progress"""
+    def __init__(self, workflow_tracker_ref):
+        self.workflow_tracker = workflow_tracker_ref
+        self.buffer = io.StringIO()
+        self.original_stdout = sys.stdout
+        
+    def write(self, text):
+        # Write to original stdout
+        self.original_stdout.write(text)
+        self.original_stdout.flush()
+        
+        # Check for agent activation messages
+        if "🤖" in text and "is now active" in text:
+            self.parse_agent_activation(text)
+        
+        return len(text)
+    
+    def flush(self):
+        self.original_stdout.flush()
+    
+    def parse_agent_activation(self, log_line):
+        """Parse agent activation from log line like: 🤖 AccommodationsAgent is now active (event: 808, API calls: 18)"""
+        import re
+        
+        # Extract agent name and details
+        pattern = r'🤖 (\w+) is now active \(event: (\d+), API calls: (\d+)\)'
+        match = re.search(pattern, log_line)
+        
+        if match:
+            agent_name = match.group(1)
+            event_count = int(match.group(2))
+            api_calls = int(match.group(3))
+            
+            # Update workflow tracker
+            if agent_name not in self.workflow_tracker["completed_agents"]:
+                # Mark previous agent as complete if exists
+                if self.workflow_tracker["current_agent"]:
+                    prev_agent = self.workflow_tracker["current_agent"]
+                    if prev_agent not in self.workflow_tracker["completed_agents"]:
+                        self.workflow_tracker["completed_agents"].append(prev_agent)
+                
+                # Set new current agent
+                self.workflow_tracker["current_agent"] = agent_name
+                self.workflow_tracker["api_calls_current_agent"] = api_calls
+                self.workflow_tracker["total_events"] = event_count
+                
+                print(f"📊 Flask Progress Update: {agent_name} active, {len(self.workflow_tracker['completed_agents'])} completed")
+
+def get_enhanced_status():
+    """Get enhanced status information for frontend"""
+    progress_percentage = calculate_progress_percentage()
+    time_remaining = estimate_time_remaining()
+    
+    current_agent_info = None
+    if workflow_tracker["current_agent"]:
+        current_agent_info = AGENT_CONFIG.get(workflow_tracker["current_agent"], {})
+    
+    return {
+        "progress_percentage": progress_percentage,
+        "time_remaining_minutes": time_remaining,
+        "current_agent": workflow_tracker["current_agent"],
+        "current_agent_info": current_agent_info,
+        "completed_agents": workflow_tracker["completed_agents"],
+        "total_agents": workflow_tracker["total_agents"],
+        "agent_config": AGENT_CONFIG,
+        "total_events": workflow_tracker["total_events"],
+        "elapsed_minutes": (time.time() - workflow_tracker["start_time"]) / 60 if workflow_tracker["start_time"] else 0
+    }
+
 def run_async_workflow(prompt, result_storage):
-    """Run the async workflow in a separate thread"""
+    """Run the async workflow in a separate thread with enhanced progress tracking"""
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
+        # Initialize progress tracking
+        reset_workflow_tracker()
+        
+        # Set up real-time progress callback
+        
         result_storage["is_processing"] = True
         result_storage["progress"] = "Starting GlobePiloT workflow..."
         
-        # Run the workflow
-        # Use production limits for web requests
+        # Redirect stdout to capture agent activation messages
+        sys.stdout = ProgressCapturingLogger(workflow_tracker)
+        sys.stderr = ProgressCapturingLogger(workflow_tracker) # Also capture stderr for errors
+        
+        # Use enhanced production limits for web requests
         production_limits = WorkflowLimits(
-            max_iterations=60,
+            max_iterations=80,
             max_revision_cycles=1,
-            max_api_calls=120,
-            max_duration_minutes=8,
+            max_api_calls=350,  # Increased from 200 to allow all 11 agents to complete (8 agents used 201 calls)
+            max_duration_minutes=15,  # Increased timeout for full 11-agent workflow
             early_termination_enabled=True
         )
-        result = loop.run_until_complete(execute_validated_travel_workflow(prompt, custom_limits=production_limits))
+        
+        # Run the workflow with real-time progress tracking via log monitoring and proper cleanup
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        
+        try:
+            result = loop.run_until_complete(execute_validated_travel_workflow(prompt, custom_limits=production_limits))
+        except Exception as workflow_error:
+            logger.error(f"Workflow execution error: {workflow_error}")
+            result = None
+        finally:
+            # Restore original stdout/stderr
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            
+            # Clean up any pending tasks
+            try:
+                pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+                if pending_tasks:
+                    logger.info(f"Cleaning up {len(pending_tasks)} pending tasks")
+                    for task in pending_tasks:
+                        task.cancel()
+                    # Wait for tasks to complete cancellation
+                    loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+            except Exception as cleanup_error:
+                logger.warning(f"Task cleanup warning: {cleanup_error}")
+        
+        # Mark all agents as complete when workflow finishes
+        workflow_tracker["completed_agents"] = list(AGENT_CONFIG.keys())
+        workflow_tracker["current_agent"] = None
+        
+        # Clear the progress callback
         
         result_storage["results"] = result
         result_storage["is_processing"] = False
@@ -133,6 +429,58 @@ def run_async_workflow(prompt, result_storage):
         result_storage["is_processing"] = False
         result_storage["progress"] = f"Error: {str(e)}"
         result_storage["results"] = None
+
+def extract_budget_from_itinerary(itinerary_text):
+    """Extract budget breakdown from itinerary text when dedicated budget analysis is not available"""
+    if not itinerary_text:
+        return "Budget analysis not available"
+    
+    # Look for budget breakdown section in the itinerary
+    budget_patterns = [
+        r'\*\*💰 BUDGET BREAKDOWN:\*\*(.*?)(?=\*\*|\n\n|$)',
+        r'\*\*BUDGET BREAKDOWN:\*\*(.*?)(?=\*\*|\n\n|$)',
+        r'💰 BUDGET BREAKDOWN:(.*?)(?=\*\*|\n\n|$)',
+        r'BUDGET BREAKDOWN:(.*?)(?=\*\*|\n\n|$)'
+    ]
+    
+    budget_info = None
+    for pattern in budget_patterns:
+        match = re.search(pattern, itinerary_text, re.DOTALL | re.IGNORECASE)
+        if match:
+            budget_info = match.group(1).strip()
+            break
+    
+    if budget_info:
+        # Clean up and format the budget information
+        lines = budget_info.split('\n')
+        formatted_budget = "**Budget Analysis (from Itinerary):**\n\n"
+        
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith('*'):
+                # Clean up bullet points and formatting
+                if line.startswith('•'):
+                    line = line[1:].strip()
+                formatted_budget += f"• {line}\n"
+        
+        return formatted_budget
+    
+    # Fallback: Look for any cost/budget information
+    cost_patterns = [
+        r'Total:?\s*\$[\d,]+-[\d,]+',
+        r'Budget:?\s*\$[\d,]+-[\d,]+',
+        r'Cost:?\s*\$[\d,]+-[\d,]+'
+    ]
+    
+    costs_found = []
+    for pattern in cost_patterns:
+        matches = re.findall(pattern, itinerary_text, re.IGNORECASE)
+        costs_found.extend(matches)
+    
+    if costs_found:
+        return f"**Budget Summary:**\n\n" + '\n'.join([f"• {cost}" for cost in costs_found])
+    
+    return "Budget analysis not available - please check the detailed research notes for cost information"
 
 @app.route('/')
 def index():
@@ -217,8 +565,9 @@ def plan_travel():
         logger.info(f"   • Full prompt length: {len(prompt)} characters")
         logger.info(f"   • Prompt preview: {prompt[:200]}...")
         
-        # Reset processing status
+        # Reset processing status and progress tracking
         global processing_status
+        reset_workflow_tracker()
         processing_status = {
             "is_processing": True, 
             "progress": "Initializing...", 
@@ -264,8 +613,16 @@ def plan_travel():
 
 @app.route('/status')
 def get_status():
-    """API endpoint to check processing status"""
-    return jsonify(processing_status)
+    """API endpoint to check processing status with enhanced progress tracking"""
+    # Combine basic status with enhanced progress tracking
+    enhanced_status = get_enhanced_status()
+    
+    status_response = {
+        **processing_status,  # Include original status fields
+        **enhanced_status     # Add enhanced progress tracking
+    }
+    
+    return jsonify(status_response)
 
 @app.route('/results')
 def view_results():
@@ -299,6 +656,10 @@ def view_results():
     structured_data = results.get("structured_data", {})
     structured_itinerary = structured_data.get("itinerary", None)
     structured_accommodations = structured_data.get("accommodations", None)
+
+    # Attempt to extract budget from itinerary if dedicated analysis is not available
+    if budget_analysis == "No budget analysis available":
+        budget_analysis = extract_budget_from_itinerary(itinerary)
     
     return render_template('results.html', 
                          itinerary=itinerary,

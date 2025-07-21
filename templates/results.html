@@ -88,6 +88,34 @@
                         {% endif %}
                     </div>
                 </div>
+                
+                <!-- Budget Analysis - Moved from sidebar -->
+                {% if budget_analysis and budget_analysis != "No budget analysis available" %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-calculator me-2"></i>Budget Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="budget-content">
+                            {{ budget_analysis|replace('\n', '<br>')|safe }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Weather Information - Moved from sidebar -->
+                {% if weather_info and weather_info != "No weather information available" %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cloud-sun me-2"></i>Weather Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="weather-content">
+                            {{ weather_info|replace('\n', '<br>')|safe }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -127,34 +155,6 @@
                 {% endif %}
             </div>
         </div>
-        
-        <!-- Budget Analysis -->
-        {% if budget_analysis and budget_analysis != "No budget analysis available" %}
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="fas fa-calculator me-2"></i>Budget Analysis</h5>
-            </div>
-            <div class="card-body">
-                <div class="budget-content">
-                    {{ budget_analysis|replace('\n', '<br>')|safe }}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- Weather Information -->
-        {% if weather_info and weather_info != "No weather information available" %}
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="fas fa-cloud-sun me-2"></i>Weather Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="weather-content">
-                    {{ weather_info|replace('\n', '<br>')|safe }}
-                </div>
-            </div>
-        </div>
-        {% endif %}
         
         <!-- Actions -->
         <div class="card mb-4">
@@ -203,7 +203,7 @@
                     </div>
                     <div class="col-6">
                         <strong>Budget:</strong><br>
-                        <span class="text-muted">${{ budget_validation.target_budget or '$100-2500' }}</span>
+                        <span class="text-muted">${{ budget_validation.target_budget or '100-2500' }}</span>
                     </div>
                 </div>
             </div>

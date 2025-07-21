@@ -349,13 +349,13 @@ general_research_agent = FunctionAgent(
         "STEP 2: Call search_web() for safety information and travel advisories\n"
         "STEP 3: Call search_web() for neighborhood recommendations and local insights\n"
         "STEP 4: Call record_travel_notes() with comprehensive general research\n"
-        "STEP 5: Call handoff(to_agent='AccommodationsAgent', reason='General research complete. Destination overview, cultural context, and safety information gathered.')\n\n"
+        "STEP 5: Call handoff(to_agent='WeatherAgent', reason='General research complete. Destination overview, cultural context, and safety information gathered. Weather analysis needed for all subsequent planning.')\n\n"
         
         "⚠️ CRITICAL: You MUST complete ALL 5 steps and provide comprehensive destination intelligence."
     ),
     llm=llm_creative,  # GPT-4o optimized for creative research and cultural insights
     tools=[search_web, record_travel_notes],
-    can_handoff_to=["AccommodationsAgent"],
+    can_handoff_to=["WeatherAgent"],
 )
 
 accommodations_agent = FunctionAgent(
@@ -373,7 +373,7 @@ accommodations_agent = FunctionAgent(
         "STEP 1: Calculate 30-50% of user's total budget for accommodations\n"
         "STEP 2: Search for 3 specific unique accommodations with pricing\n"
         "STEP 3: Record findings with record_travel_notes()\n"
-        "STEP 4: Call handoff(to_agent='ActivitiesAgent', reason='Found 3 accommodation options within budget')\n\n"
+        "STEP 4: Call handoff(to_agent='BudgetAnalysisAgent', reason='Found 3 accommodation options within budget. Major costs (flights + accommodations) now available for budget analysis.')\n\n"
         
         "📋 FOR EACH ACCOMMODATION PROVIDE:\n"
         "• Name and address\n"
@@ -386,7 +386,7 @@ accommodations_agent = FunctionAgent(
     ),
     llm=llm_creative,
     tools=[search_web, record_travel_notes],
-    can_handoff_to=["ActivitiesAgent"],
+    can_handoff_to=["BudgetAnalysisAgent"],
 )
 
 activities_agent = FunctionAgent(
@@ -416,13 +416,13 @@ local_events_agent = FunctionAgent(
         "🚀 SIMPLE EXECUTION:\n"
         "STEP 1: Search for popular restaurants and local events\n"
         "STEP 2: Record findings with record_travel_notes(category='local_events')\n"
-        "STEP 3: Call handoff(to_agent='FlightAgent', reason='Local events research complete')\n\n"
+        "STEP 3: Call handoff(to_agent='LocalTransportationAgent', reason='Local events research complete. Activities and events identified, now need transportation planning between all destinations.')\n\n"
         
         "⚠️ CRITICAL: Complete ALL 3 steps quickly. Focus on main restaurants and events only."
     ),
     llm=llm_creative,
     tools=[search_web, record_travel_notes],
-    can_handoff_to=["FlightAgent"],
+    can_handoff_to=["LocalTransportationAgent"],
 )
 
 flight_agent = FunctionAgent(
@@ -454,13 +454,13 @@ flight_agent = FunctionAgent(
         "STEP 2: Call search_web() for booking strategies and pricing optimization\n"
         "STEP 3: Call search_web() for airport logistics and connection information\n"
         "STEP 4: Call record_travel_notes() with comprehensive flight guide\n"
-        "STEP 5: Call handoff(to_agent='LocalTransportationAgent', reason='Flight research complete. Optimal flight options and booking strategies identified.')\n\n"
+        "STEP 5: Call handoff(to_agent='AccommodationsAgent', reason='Flight research complete. Optimal flight options and booking strategies identified. Accommodation research needed next as hotel timing depends on flight schedules.')\n\n"
         
         "⚠️ CRITICAL: You MUST complete ALL 5 steps and provide comprehensive flight guidance."
     ),
     llm=llm_reasoning,  # GPT-4.1 optimized for logical optimization and route planning
     tools=[search_web, record_travel_notes],
-    can_handoff_to=["LocalTransportationAgent"],
+    can_handoff_to=["AccommodationsAgent"],
 )
 
 local_transportation_agent = FunctionAgent(
@@ -492,13 +492,13 @@ local_transportation_agent = FunctionAgent(
         "STEP 2: Call search_web() for airport transfer options and costs\n"
         "STEP 3: Call search_web() for taxi, rideshare, and alternative transport\n"
         "STEP 4: Call record_travel_notes() with comprehensive local transport guide\n"
-        "STEP 5: Call handoff(to_agent='WeatherAgent', reason='Local transportation research complete. Comprehensive ground transportation and mobility solutions identified.')\n\n"
+        "STEP 5: Call handoff(to_agent='TravelPlannerAgent', reason='Local transportation research complete. Comprehensive ground transportation and mobility solutions identified. All research components ready for final itinerary synthesis.')\n\n"
         
         "⚠️ CRITICAL: You MUST complete ALL 5 steps and provide comprehensive local transportation guidance."
     ),
     llm=llm_reasoning,  # GPT-4.1 optimized for logical optimization and practical planning
     tools=[search_web, record_travel_notes],
-    can_handoff_to=["WeatherAgent"],
+    can_handoff_to=["TravelPlannerAgent"],
 )
 
 # Existing agents remain unchanged:
@@ -547,7 +547,7 @@ budget_analysis_agent = FunctionAgent(
         "STEP 7: Create comprehensive budget scenarios (budget/mid-range/luxury)\n"
         "STEP 8: Call update_budget_analysis() with detailed cost breakdown and scenarios\n"
         "STEP 9: Call record_travel_notes() with cost-saving strategies and recommendations\n"
-        "STEP 10: Call handoff(to_agent='FlightAgent', reason='Budget analysis complete. Comprehensive cost breakdown created with multiple budget scenarios, current pricing, and cost-saving strategies identified.')\n\n"
+        "STEP 10: Call handoff(to_agent='ActivitiesAgent', reason='Budget analysis complete. Comprehensive cost breakdown created with multiple budget scenarios, current pricing, and cost-saving strategies identified. Activity planning can now proceed within available budget.')\n\n"
         
         "📋 BUDGET OUTPUT FORMAT:\n"
         "Structure your analysis with clear budget scenarios, detailed category breakdowns, and actionable cost-saving recommendations. "
@@ -564,7 +564,7 @@ budget_analysis_agent = FunctionAgent(
     ),
     llm=llm_reasoning,  # GPT-4.1 optimized for mathematical analysis and budget calculations
     tools=[search_web, record_travel_notes, update_budget_analysis],
-    can_handoff_to=["FlightAgent"],
+    can_handoff_to=["ActivitiesAgent"],
 )
 
 weather_agent = FunctionAgent(
@@ -619,7 +619,7 @@ weather_agent = FunctionAgent(
         "STEP 6: Compile comprehensive weather analysis with recommendations\n"
         "STEP 7: Call record_weather_info() with detailed weather analysis and forecasts\n"
         "STEP 8: Call record_travel_notes() with weather insights and activity recommendations\n"
-        "STEP 9: Call handoff(to_agent='DocumentAgent', reason='Weather research complete. Comprehensive climate analysis provided including forecasts, seasonal patterns, activity recommendations, and packing implications.')\n\n"
+        "STEP 9: Call handoff(to_agent='FlightAgent', reason='Weather research complete. Comprehensive climate analysis provided including forecasts, seasonal patterns, activity recommendations, and packing implications. Flight research needed next to determine major transportation costs.')\n\n"
         
         "📊 WEATHER OUTPUT FORMAT:\n"
         "• Daily weather breakdown with specific temperature ranges and conditions\n"
@@ -641,7 +641,7 @@ weather_agent = FunctionAgent(
     ),
     llm=llm_reasoning,  # GPT-4.1 optimized for data analysis and factual accuracy
     tools=[search_web, record_travel_notes, record_weather_info],
-    can_handoff_to=["DocumentAgent"],
+    can_handoff_to=["FlightAgent"],
 )
 
 travel_planner_agent = FunctionAgent(
@@ -851,6 +851,7 @@ enhanced_travel_workflow = AgentWorkflow(
         accommodations_agent,
         activities_agent,
         local_events_agent,
+        budget_analysis_agent,  # Added missing budget analysis agent
         flight_agent,
         local_transportation_agent,
         weather_agent,
