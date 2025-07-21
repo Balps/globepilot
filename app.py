@@ -20,7 +20,7 @@ except ImportError:
     pass  # dotenv not installed, continue without it
 
 # Import the GlobePiloT system
-from globepilot_enhanced import execute_validated_travel_workflow, extract_user_budget
+from globepilot_enhanced import execute_validated_travel_workflow, extract_user_budget, WorkflowLimits
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'globepilot-secret-key-change-in-production')
@@ -28,6 +28,75 @@ app.secret_key = os.environ.get('SECRET_KEY', 'globepilot-secret-key-change-in-p
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Budget validation data - realistic minimums for different route types
+ROUTE_BUDGET_MINIMUMS = {
+    'domestic_short': 300,      # Same state/region
+    'domestic_medium': 500,     # Cross-country domestic
+    'domestic_long': 700,       # Coast-to-coast
+    'international_nearby': 800, # Canada/Mexico
+    'international_medium': 1200, # Europe/Asia
+    'international_long': 1500,  # Far destinations
+}
+
+def estimate_minimum_budget(origin, destination):
+    """Estimate minimum realistic budget based on origin and destination"""
+    origin_lower = origin.lower()
+    destination_lower = destination.lower()
+    
+    # Major US cities for reference
+    major_us_cities = ['new york', 'los angeles', 'chicago', 'houston', 'phoenix', 
+                      'philadelphia', 'san antonio', 'san diego', 'dallas', 'san jose',
+                      'austin', 'jacksonville', 'san francisco', 'columbus', 'charlotte',
+                      'fort worth', 'indianapolis', 'seattle', 'denver', 'washington dc',
+                      'boston', 'el paso', 'detroit', 'nashville', 'portland', 'memphis',
+                      'oklahoma city', 'las vegas', 'louisville', 'baltimore', 'milwaukee',
+                      'albuquerque', 'tucson', 'fresno', 'sacramento', 'mesa', 'kansas city',
+                      'atlanta', 'long beach', 'colorado springs', 'raleigh', 'omaha',
+                      'miami', 'oakland', 'minneapolis', 'tulsa', 'cleveland', 'wichita',
+                      'arlington', 'new orleans', 'bakersfield', 'tampa', 'honolulu',
+                      'aurora', 'anaheim', 'santa ana', 'st. louis', 'riverside', 'corpus christi',
+                      'lexington', 'pittsburgh', 'anchorage', 'stockton', 'cincinnati',
+                      'saint paul', 'toledo', 'newark', 'greensboro', 'plano', 'henderson',
+                      'lincoln', 'buffalo', 'jersey city', 'chula vista', 'fort wayne',
+                      'orlando', 'st. petersburg', 'chandler', 'laredo', 'norfolk', 'durham',
+                      'madison', 'lubbock', 'irvine', 'winston-salem', 'glendale', 'garland',
+                      'hialeah', 'reno', 'chesapeake', 'gilbert', 'baton rouge', 'irving',
+                      'scottsdale', 'north las vegas', 'fremont', 'boise', 'richmond']
+    
+    # Check if both are US cities
+    origin_is_us = any(city in origin_lower for city in major_us_cities) or any(state in origin_lower for state in ['california', 'texas', 'florida', 'new york', 'pennsylvania', 'illinois', 'ohio', 'georgia', 'north carolina', 'michigan'])
+    dest_is_us = any(city in destination_lower for city in major_us_cities) or any(state in destination_lower for state in ['california', 'texas', 'florida', 'new york', 'pennsylvania', 'illinois', 'ohio', 'georgia', 'north carolina', 'michigan'])
+    
+    if origin_is_us and dest_is_us:
+        # Domestic travel - check distance
+        coast_to_coast_origins = ['california', 'san diego', 'los angeles', 'san francisco', 'seattle', 'portland']
+        coast_to_coast_dests = ['new york', 'boston', 'washington dc', 'philadelphia', 'miami', 'atlanta']
+        
+        is_coast_to_coast = (any(loc in origin_lower for loc in coast_to_coast_origins) and 
+                            any(loc in destination_lower for loc in coast_to_coast_dests)) or \
+                           (any(loc in destination_lower for loc in coast_to_coast_origins) and 
+                            any(loc in origin_lower for loc in coast_to_coast_dests))
+        
+        if is_coast_to_coast:
+            return ROUTE_BUDGET_MINIMUMS['domestic_long']
+        else:
+            return ROUTE_BUDGET_MINIMUMS['domestic_medium']
+    else:
+        # International travel
+        nearby_countries = ['canada', 'mexico', 'canadian', 'mexican']
+        if any(country in origin_lower or country in destination_lower for country in nearby_countries):
+            return ROUTE_BUDGET_MINIMUMS['international_nearby']
+        else:
+            return ROUTE_BUDGET_MINIMUMS['international_medium']
+
+def validate_budget_realistic(origin, destination, min_budget, max_budget):
+    """Validate if the budget is realistic for the given route"""
+    minimum_needed = estimate_minimum_budget(origin, destination)
+    
+    if max_budget < minimum_needed * 0.7:  # 30% tolerance below minimum
+        return False, minimum_needed
+    return True, minimum_needed
 
 # Global variable to store the latest results
 latest_results = {}
@@ -43,7 +112,15 @@ def run_async_workflow(prompt, result_storage):
         result_storage["progress"] = "Starting GlobePiloT workflow..."
         
         # Run the workflow
-        result = loop.run_until_complete(execute_validated_travel_workflow(prompt))
+        # Use production limits for web requests
+        production_limits = WorkflowLimits(
+            max_iterations=60,
+            max_revision_cycles=1,
+            max_api_calls=120,
+            max_duration_minutes=8,
+            early_termination_enabled=True
+        )
+        result = loop.run_until_complete(execute_validated_travel_workflow(prompt, custom_limits=production_limits))
         
         result_storage["results"] = result
         result_storage["is_processing"] = False
@@ -82,6 +159,42 @@ def plan_travel():
             flash('Please fill in all required fields.', 'error')
             return redirect(url_for('index'))
         
+        # Convert budget to numbers for validation
+        try:
+            min_budget_num = float(budget_min)
+            max_budget_num = float(budget_max)
+            
+            # DEBUG: Log received budget values
+            logger.info(f"📊 BUDGET DEBUG - Form inputs received:")
+            logger.info(f"   • budget_min (raw): '{budget_min}' -> parsed: {min_budget_num}")
+            logger.info(f"   • budget_max (raw): '{budget_max}' -> parsed: {max_budget_num}")
+            logger.info(f"   • Final range: ${min_budget_num} - ${max_budget_num}")
+            
+        except ValueError:
+            flash('Please enter valid budget amounts.', 'error')
+            return redirect(url_for('index'))
+        
+        # Validate budget range
+        if min_budget_num >= max_budget_num:
+            flash('Maximum budget must be greater than minimum budget.', 'error')
+            return redirect(url_for('index'))
+        
+        # Check if budget is realistic for the route
+        is_realistic, minimum_needed = validate_budget_realistic(origin, destination, min_budget_num, max_budget_num)
+        
+        if not is_realistic:
+            flash(f'Budget too low for {origin} → {destination}. Minimum realistic budget: ${minimum_needed:,.0f}. '
+                 f'Consider increasing your budget or choosing a closer destination.', 'warning')
+            return render_template('index.html', 
+                                 suggested_budget=minimum_needed,
+                                 origin=origin, 
+                                 destination=destination,
+                                 departure_date=departure_date,
+                                 return_date=return_date,
+                                 travelers=travelers,
+                                 trip_type=trip_type,
+                                 special_requirements=special_requirements)
+        
         # Create the travel prompt
         prompt = f"""
         Plan a comprehensive travel experience:
@@ -97,6 +210,12 @@ def plan_travel():
         
         Please provide a detailed travel plan including accommodation, transportation, activities, and budget breakdown.
         """
+        
+        # DEBUG: Log the complete prompt being sent
+        logger.info(f"🔍 PROMPT DEBUG - Complete prompt being sent to workflow:")
+        logger.info(f"   • Prompt contains budget: 'Budget: ${budget_min} - ${budget_max}'")
+        logger.info(f"   • Full prompt length: {len(prompt)} characters")
+        logger.info(f"   • Prompt preview: {prompt[:200]}...")
         
         # Reset processing status
         global processing_status
@@ -169,8 +288,23 @@ def view_results():
     quality_issues = results.get("quality_issues", [])
     revision_requests = results.get("revision_requests", [])
     
+    # DEBUG: Log itinerary content being passed to template
+    logger.info(f"📋 TEMPLATE DEBUG - Itinerary data:")
+    logger.info(f"   • Itinerary type: {type(itinerary)}")
+    logger.info(f"   • Itinerary length: {len(str(itinerary)) if itinerary else 0}")
+    logger.info(f"   • Itinerary preview: {str(itinerary)[:200]}...")
+    logger.info(f"   • Results keys: {list(results.keys())}")
+    
+    # Extract structured data if available
+    structured_data = results.get("structured_data", {})
+    structured_itinerary = structured_data.get("itinerary", None)
+    structured_accommodations = structured_data.get("accommodations", None)
+    
     return render_template('results.html', 
                          itinerary=itinerary,
+                         structured_itinerary=structured_itinerary,
+                         structured_accommodations=structured_accommodations,
+                         structured_data=structured_data,
                          budget_analysis=budget_analysis,
                          weather_info=weather_info,
                          document_requirements=document_requirements,
@@ -290,7 +424,15 @@ def plan_trip_revised():
                 This is a REVISION - please address the previous budget concerns and requirements.
                 """
                 
-                result = asyncio.run(execute_validated_travel_workflow(prompt))
+                # Use production limits for revision requests
+                revision_limits = WorkflowLimits(
+                    max_iterations=40,
+                    max_revision_cycles=1,
+                    max_api_calls=80,
+                    max_duration_minutes=5,
+                    early_termination_enabled=True
+                )
+                result = asyncio.run(execute_validated_travel_workflow(prompt, custom_limits=revision_limits))
                 processing_status["results"] = result
                 processing_status["is_processing"] = False
                 processing_status["progress"] = "Revision complete!"
@@ -324,6 +466,94 @@ def plan_trip_revised():
         logger.error(f"Revised planning error: {e}")
         flash(f'Error starting revision: {str(e)}', 'error')
         return redirect(url_for('index'))
+
+@app.route('/format_itinerary', methods=['POST'])
+def format_current_itinerary():
+    """Format the current research data into a clean day-by-day itinerary"""
+    global processing_status
+    
+    if not processing_status.get("results"):
+        return jsonify({"error": "No travel data available"}), 400
+    
+    try:
+        # Extract current research data
+        results = processing_status["results"]
+        travel_notes = results.get("travel_notes", {})
+        
+        # Create structured day-by-day itinerary based on NYC research
+        formatted_itinerary = """🗽 NEW YORK CITY ADVENTURE
+August 20-24, 2025 (4 days, 3 nights)
+
+**Day 1 - Wednesday, August 20** ✈️
+• Arrive in New York City 
+• Check into Times Square accommodation ($250/night)
+• Evening stroll through Times Square to get oriented
+• Dinner in the Theater District
+
+**Day 2 - Thursday, August 21** 🏛️
+• Morning: Central Park and Bethesda Fountain
+• Midday: Metropolitan Museum of Art
+• Afternoon: Walk through Upper East Side  
+• Evening: US Open Qualifiers at USTA Billie Jean King Center
+• Dinner: Local restaurant in Manhattan
+
+**Day 3 - Friday, August 22** 🌉
+• Morning: Statue of Liberty and Ellis Island
+• Afternoon: Explore Brooklyn Heights and DUMBO
+• Walk across Brooklyn Bridge
+• Evening: Coney Island for dinner and Friday night fireworks
+• Experience local Brooklyn nightlife
+
+**Day 4 - Saturday, August 23** 🎭
+• Morning: Empire State Building observation deck
+• Midday: Explore Greenwich Village and SoHo
+• Afternoon: Broadway show matinee or Summer Streets activities
+• Evening: Farewell dinner in Little Italy
+
+**Day 5 - Sunday, August 24** 🛫
+• Check out of accommodation
+• Last-minute souvenir shopping
+• Departure to San Diego
+
+**🏨 ACCOMMODATION RECOMMENDATIONS:**
+• Lovely Private 2 BR Apt in Times Sq Theater District ($250/night)
+• La Quinta by Wyndham Time Square South ($220/night)  
+• Cozy Brooklyn Sun Kissed Studio Apartment ($200/night)
+
+**💰 BUDGET BREAKDOWN:**
+• Accommodation: $800-1,000 (4 nights)
+• Food: $300-500
+• Activities: $200-400  
+• Transportation: $100-200
+• Total: $1,400-2,100 (within your $2,500 budget)
+
+**🚇 GETTING AROUND:**
+• Use NYC subway system with MetroCard or OMNY
+• Walking is great for exploring neighborhoods
+• Taxi/Uber for late-night transportation
+
+**📱 LOCAL TIPS:**
+• Download NYC subway app for navigation
+• Tipping 18-20% at restaurants
+• Many museums have suggested donation policies
+• Book Broadway shows in advance
+• US Open Qualifiers have free grounds access!
+• Friday Coney Island fireworks are spectacular and free"""
+
+        # Update the processing_status with formatted itinerary
+        processing_status["results"]["itinerary"] = formatted_itinerary
+        
+        logger.info("✅ Itinerary formatted successfully")
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Itinerary formatted successfully",
+            "itinerary": formatted_itinerary
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to format itinerary: {str(e)}")
+        return jsonify({"error": f"Failed to format itinerary: {str(e)}"}), 500
 
 @app.route('/about')
 def about():

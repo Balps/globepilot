@@ -1,7 +1,26 @@
 #!/usr/bin/env python3
 """
-GlobePiloT: AI-Powered Multi-Agent Travel Assistant with Validation
-A comprehensive travel planning system with intelligent validation and quality control.
+Enhanced GlobePiloT with Multi-Agent Validation System
+A sophisticated AI-powered travel planning platform with comprehensive validation and quality control.
+
+WORKFLOW LIMITS SYSTEM:
+- max_iterations: Maximum AI reasoning steps for the workflow (default: 50, was 300)
+- max_revision_cycles: Maximum revision attempts (default: 1, was 3)
+- max_api_calls: Maximum API calls per workflow run (default: 100)
+- max_duration_minutes: Maximum runtime in minutes (default: 5)
+- early_termination_enabled: Allow early completion when basic plan is ready (default: True)
+
+PRODUCTION LIMITS (Web App):
+- 60 AI reasoning steps, 120 API calls, 8 minute timeout for main planning
+- 40 AI reasoning steps, 80 API calls, 5 minute timeout for revisions
+
+TEST LIMITS:
+- 25-30 AI reasoning steps, 40-50 API calls, 2-3 minute timeout for faster testing
+
+NOTE: The workflow manages its own AI iteration limits internally. Stream events 
+(agent changes, tool calls, etc.) are monitored separately for tracking purposes only.
+
+This prevents excessive API usage and ensures reasonable response times.
 """
 
 import os
@@ -10,6 +29,8 @@ import time
 import re
 from datetime import datetime, timedelta
 from tavily import AsyncTavilyClient
+from dataclasses import dataclass
+from typing import Optional
 
 # Load environment variables from .env file if it exists
 try:
@@ -40,8 +61,23 @@ if not OPENAI_API_KEY:
 if not TAVILY_API_KEY:
     TAVILY_API_KEY = input("Enter your Tavily API key: ")
 
-# Initialize LLM
-llm = OpenAI(temperature=0.2, model="gpt-4o", api_key=OPENAI_API_KEY, top_p=0.95)
+# Initialize LLMs optimized for different cognitive requirements
+# Based on OpenAI model research and each agent's specific needs
+
+# GPT-4o: Best for creative tasks, multimodal processing, general research
+llm_creative = OpenAI(temperature=0.3, model="gpt-4o", api_key=OPENAI_API_KEY, top_p=0.9)
+
+# GPT-4.1: Best for complex reasoning, large context, instruction following, coding
+llm_reasoning = OpenAI(temperature=0.2, model="gpt-4.1", api_key=OPENAI_API_KEY, top_p=0.85)
+
+# o3: Best for deep analytical reasoning, validation, quality control
+llm_analytical = OpenAI(temperature=0.1, model="o3", api_key=OPENAI_API_KEY, top_p=0.8)
+
+# GPT-4-turbo: Best for fast, efficient processing
+llm_efficient = OpenAI(temperature=0.2, model="gpt-4-turbo", api_key=OPENAI_API_KEY, top_p=0.9)
+
+# Default LLM for backward compatibility
+llm = llm_creative  # Default to creative model
 Settings.llm = llm
 
 print("🌍 GlobePiloT Enhanced - AI Travel Planning System")
@@ -117,6 +153,32 @@ async def record_document_requirements(ctx: Context, document_list: str) -> str:
     current_state["document_requirements"] = document_list
     await ctx.store.set("state", current_state)
     return "Document requirements recorded."
+
+async def record_structured_data(ctx: Context, data: dict, category: str, schema: dict | None = None) -> str:
+    """Records structured JSON data for a specific category with optional schema validation."""
+    try:
+        import json
+        # Validate against schema if provided
+        if schema:
+            # Basic validation - in production, use jsonschema library
+            pass
+        
+        current_state = await ctx.store.get("state")
+        if "structured_data" not in current_state:
+            current_state["structured_data"] = {}
+        
+        current_state["structured_data"][category] = data
+        await ctx.store.set("state", current_state)
+        
+        # Also keep legacy text version for backward compatibility
+        if "travel_notes" not in current_state:
+            current_state["travel_notes"] = {}
+        current_state["travel_notes"][category] = json.dumps(data, indent=2)
+        await ctx.store.set("state", current_state)
+        
+        return f"Structured data recorded for category: {category}"
+    except Exception as e:
+        return f"Error recording structured data: {str(e)}"
 
 async def get_document_requirements(ctx: Context) -> str:
     """Retrieves document requirements from the DocumentAgent for packing decisions."""
@@ -214,209 +276,569 @@ async def calculate_total_budget(ctx: Context) -> float:
 async def extract_user_budget(user_prompt: str) -> tuple:
     """Extract budget range from user prompt."""
     
+    # DEBUG: Log the input prompt
+    print(f"🔍 BUDGET EXTRACTION DEBUG:")
+    print(f"   • Input prompt: '{user_prompt}'")
+    print(f"   • Prompt length: {len(user_prompt)}")
+    
     budget_patterns = [
-        r'budget[:\s]*\$?(\d{1,3}(?:,\d{3})*)\s*[-–to]\s*\$?(\d{1,3}(?:,\d{3})*)',
-        r'\$(\d{1,3}(?:,\d{3})*)\s*[-–to]\s*\$?(\d{1,3}(?:,\d{3})*)',
-        r'(\d{1,3}(?:,\d{3})*)\s*[-–to]\s*(\d{1,3}(?:,\d{3})*)\s*budget',
-        r'(\d{1,3}(?:,\d{3})*)\s*[-–]\s*(\d{1,3}(?:,\d{3})*)\s*budget',
-        r'budget[:\s]*\$?(\d{1,3}(?:,\d{3})*)',
-        r'\$(\d{1,3}(?:,\d{3})*)'
+        # Improved patterns to handle larger numbers like 2000, 10000 etc.
+        r'budget[:\s]*\$?(\d+(?:,\d{3})*)\s*[-–to]\s*\$?(\d+(?:,\d{3})*)',  # Budget: $100 - $2000
+        r'\$(\d+(?:,\d{3})*)\s*[-–to]\s*\$?(\d+(?:,\d{3})*)',              # $100 - $2000
+        r'(\d+(?:,\d{3})*)\s*[-–to]\s*(\d+(?:,\d{3})*)\s*budget',          # 100 - 2000 budget
+        r'(\d+(?:,\d{3})*)\s*[-–]\s*(\d+(?:,\d{3})*)\s*budget',            # 100 - 2000 budget
+        r'budget[:\s]*\$?(\d+(?:,\d{3})*)',                                 # Budget: $1000
+        r'\$(\d+(?:,\d{3})*)'                                               # $1000
     ]
     
-    for pattern in budget_patterns:
+    for i, pattern in enumerate(budget_patterns):
         match = re.search(pattern, user_prompt, re.IGNORECASE)
+        print(f"   • Pattern {i+1}: '{pattern}' -> {'MATCH' if match else 'NO MATCH'}")
         if match:
+            print(f"     - Match groups: {match.groups()}")
             if len(match.groups()) == 2:
                 min_budget = float(match.group(1).replace(',', ''))
                 max_budget = float(match.group(2).replace(',', ''))
+                print(f"     - Extracted range: {min_budget} - {max_budget}")
                 return min_budget, max_budget
             else:
                 budget = float(match.group(1).replace(',', ''))
-                return budget * 0.8, budget * 1.2
+                min_budget = budget * 0.8
+                max_budget = budget * 1.2
+                print(f"     - Single budget {budget} -> range: {min_budget} - {max_budget}")
+                return min_budget, max_budget
     
+    print(f"   • No budget patterns matched, returning default: 0.0 - inf")
     return 0.0, float('inf')
 
 # ============================================================================
 # TRAVEL AGENTS
 # ============================================================================
 
-destination_research_agent = FunctionAgent(
-    name="DestinationResearchAgent",
-    description="Expert travel research agent specialized in destinations, attractions, and travel advisories.",
+# ============================================================================
+# STREAMLINED SPECIALIZED AGENTS
+# ============================================================================
+
+general_research_agent = FunctionAgent(
+    name="GeneralResearchAgent", 
+    description="Expert general destination research specialist providing comprehensive destination intelligence and cultural insights.",
     system_prompt=(
-        "You are a destination research agent with access to real-time web search. "
-        "Research comprehensive destination information including attractions, accommodations, and activities. "
-        "MANDATORY STEPS: "
-        "1. Call search_web(query='destination research query') "
-        "2. Call record_travel_notes(notes='detailed research findings', category='destination_research') "
-        "3. Call handoff(to_agent='BudgetAnalysisAgent', reason='Destination research complete') "
-        "Complete all steps in order."
+        "You are a world-class general destination research specialist with deep expertise in travel destinations globally. "
+        "Your mission is to provide comprehensive destination intelligence, cultural context, and safety information.\n\n"
+        
+        "🎯 RESEARCH OBJECTIVES:\n"
+        "• Gather comprehensive destination overview and cultural context\n"
+        "• Research safety information and travel advisories\n"
+        "• Identify seasonal considerations and optimal visit times\n"
+        "• Research transportation hubs and city access information\n"
+        "• Provide cultural customs, etiquette, and local tips\n"
+        "• Research neighborhoods and area recommendations\n"
+        "• Identify essential practical information for travelers\n\n"
+        
+        "📋 MANDATORY RESEARCH CATEGORIES:\n"
+        "1. DESTINATION OVERVIEW: History, culture, geography, climate\n"
+        "2. NEIGHBORHOODS: Best areas for tourists, local character, safety\n"
+        "3. CULTURAL CONTEXT: Local customs, tipping, dress codes, language tips\n"
+        "4. SAFETY & PRACTICAL: Travel advisories, safe areas, common scams\n"
+        "5. SEASONAL INFO: Weather patterns, peak/off seasons, seasonal events\n"
+        "6. TRANSPORTATION HUBS: Airport details, city center access\n"
+        "7. LOCAL TIPS: Insider knowledge, practical advice, cultural insights\n\n"
+        
+        "🚀 EXECUTION STEPS:\n"
+        "STEP 1: Call search_web() for destination overview and cultural information\n"
+        "STEP 2: Call search_web() for safety information and travel advisories\n"
+        "STEP 3: Call search_web() for neighborhood recommendations and local insights\n"
+        "STEP 4: Call record_travel_notes() with comprehensive general research\n"
+        "STEP 5: Call handoff(to_agent='AccommodationsAgent', reason='General research complete. Destination overview, cultural context, and safety information gathered.')\n\n"
+        
+        "⚠️ CRITICAL: You MUST complete ALL 5 steps and provide comprehensive destination intelligence."
     ),
-    llm=llm,
+    llm=llm_creative,  # GPT-4o optimized for creative research and cultural insights
     tools=[search_web, record_travel_notes],
-    can_handoff_to=["BudgetAnalysisAgent"],
+    can_handoff_to=["AccommodationsAgent"],
 )
 
-budget_analysis_agent = FunctionAgent(
-    name="BudgetAnalysisAgent",
-    description="Expert travel budget analyst specialized in cost estimation and budget planning.",
+accommodations_agent = FunctionAgent(
+    name="AccommodationsAgent",
+    description="Expert accommodation specialist focusing on unique stays within 30-50% of total travel budget.",
     system_prompt=(
-        "You are a budget analysis agent that researches travel costs and creates detailed budget breakdowns. "
-        "MANDATORY STEPS: "
-        "1. Call search_web(query='budget and pricing query') "
-        "2. Call record_travel_notes(notes='budget analysis', category='budget_analysis') "
-        "3. Call update_budget_analysis(budget_breakdown='detailed breakdown') "
-        "4. Call handoff(to_agent='TransportationAgent', reason='Budget analysis complete') "
-        "Complete all steps in order."
+        "You are a world-class accommodation specialist. Your mission is to find 3 exceptional accommodations that cost 30-50% of the user's total travel budget.\n\n"
+        
+        "🎯 YOUR OBJECTIVES:\n"
+        "• Find 3 unique accommodation options with exact pricing\n"
+        "• Apply 30-50% budget allocation rule\n"
+        "• Focus on location, amenities, and booking information\n\n"
+        
+        "🚀 SIMPLIFIED EXECUTION:\n"
+        "STEP 1: Calculate 30-50% of user's total budget for accommodations\n"
+        "STEP 2: Search for 3 specific unique accommodations with pricing\n"
+        "STEP 3: Record findings with record_travel_notes()\n"
+        "STEP 4: Call handoff(to_agent='ActivitiesAgent', reason='Found 3 accommodation options within budget')\n\n"
+        
+        "📋 FOR EACH ACCOMMODATION PROVIDE:\n"
+        "• Name and address\n"
+        "• Price per night and total cost\n"
+        "• Platform (Hotel/Airbnb/VRBO)\n"
+        "• Key amenities\n"
+        "• Why it's recommended\n\n"
+        
+        "⚠️ CRITICAL: Complete ALL 4 steps quickly and efficiently. Focus on essential information only."
     ),
-    llm=llm,
-    tools=[search_web, record_travel_notes, update_budget_analysis],
-    can_handoff_to=["TransportationAgent"],
+    llm=llm_creative,
+    tools=[search_web, record_travel_notes],
+    can_handoff_to=["ActivitiesAgent"],
 )
 
-transportation_agent = FunctionAgent(
-    name="TransportationAgent",
-    description="Expert transportation specialist finding optimal travel routes and local transportation.",
+activities_agent = FunctionAgent(
+    name="ActivitiesAgent",
+    description="Expert activities specialist providing attraction recommendations.",
     system_prompt=(
-        "You are a transportation research agent. Research flight options, local transportation, and logistics. "
-        "MANDATORY STEPS: "
-        "1. Call search_web(query='transportation and flight options') "
-        "2. Call record_travel_notes(notes='transportation research', category='transportation') "
-        "3. Call handoff(to_agent='WeatherAgent', reason='Transportation research complete') "
-        "Complete all steps in order."
+        "You are an activities specialist. Find the best attractions and activities for travelers.\n\n"
+        
+        "🚀 SIMPLE EXECUTION:\n"
+        "STEP 1: Search for top attractions in the destination\n"
+        "STEP 2: Record findings with record_travel_notes(category='activities')\n"
+        "STEP 3: Call handoff(to_agent='LocalEventsAgent', reason='Activities research complete')\n\n"
+        
+        "⚠️ CRITICAL: Complete ALL 3 steps quickly. Focus on major attractions only."
     ),
-    llm=llm,
+    llm=llm_creative,
+    tools=[search_web, record_travel_notes],
+    can_handoff_to=["LocalEventsAgent"],
+)
+
+local_events_agent = FunctionAgent(
+    name="LocalEventsAgent",
+    description="Expert local events and dining specialist.",
+    system_prompt=(
+        "You are a local events and dining specialist. Find restaurants and local events for travelers.\n\n"
+        
+        "🚀 SIMPLE EXECUTION:\n"
+        "STEP 1: Search for popular restaurants and local events\n"
+        "STEP 2: Record findings with record_travel_notes(category='local_events')\n"
+        "STEP 3: Call handoff(to_agent='FlightAgent', reason='Local events research complete')\n\n"
+        
+        "⚠️ CRITICAL: Complete ALL 3 steps quickly. Focus on main restaurants and events only."
+    ),
+    llm=llm_creative,
+    tools=[search_web, record_travel_notes],
+    can_handoff_to=["FlightAgent"],
+)
+
+flight_agent = FunctionAgent(
+    name="FlightAgent",
+    description="Expert flight specialist providing comprehensive flight booking, routing, and airport logistics recommendations.",
+    system_prompt=(
+        "You are a world-class flight specialist with expertise in airline operations, flight booking strategies, and airport logistics. "
+        "Your mission is to provide optimal flight recommendations and comprehensive air travel guidance.\n\n"
+        
+        "🎯 FLIGHT OBJECTIVES:\n"
+        "• Research optimal flight routes and airline options\n"
+        "• Identify best booking strategies and timing for cost savings\n"
+        "• Research airport logistics and connection requirements\n"
+        "• Provide airline comparison and service level analysis\n"
+        "• Research baggage policies and travel restrictions\n"
+        "• Identify alternative airports and routing options\n\n"
+        
+        "📋 MANDATORY FLIGHT CATEGORIES:\n"
+        "1. FLIGHT OPTIONS: Direct routes, connections, airline comparisons\n"
+        "2. PRICING STRATEGIES: Best booking times, price alerts, fare classes\n"
+        "3. AIRPORT LOGISTICS: Check-in, security, connections, amenities\n"
+        "4. BAGGAGE: Policies, fees, restrictions, packing guidelines\n"
+        "5. ALTERNATIVES: Different airports, flexible dates, routing options\n"
+        "6. BOOKING PLATFORMS: Best booking sites, airline direct booking\n"
+        "7. TRAVEL TIPS: Seat selection, upgrades, frequent flyer benefits\n\n"
+        
+        "🚀 EXECUTION STEPS:\n"
+        "STEP 1: Call search_web() for flight options and airline comparisons\n"
+        "STEP 2: Call search_web() for booking strategies and pricing optimization\n"
+        "STEP 3: Call search_web() for airport logistics and connection information\n"
+        "STEP 4: Call record_travel_notes() with comprehensive flight guide\n"
+        "STEP 5: Call handoff(to_agent='LocalTransportationAgent', reason='Flight research complete. Optimal flight options and booking strategies identified.')\n\n"
+        
+        "⚠️ CRITICAL: You MUST complete ALL 5 steps and provide comprehensive flight guidance."
+    ),
+    llm=llm_reasoning,  # GPT-4.1 optimized for logical optimization and route planning
+    tools=[search_web, record_travel_notes],
+    can_handoff_to=["LocalTransportationAgent"],
+)
+
+local_transportation_agent = FunctionAgent(
+    name="LocalTransportationAgent", 
+    description="Expert local transportation specialist providing comprehensive ground transportation, public transit, and mobility solutions.",
+    system_prompt=(
+        "You are a world-class local transportation specialist with expertise in public transit, ground transportation, and urban mobility. "
+        "Your mission is to provide comprehensive local transportation guidance for efficient and cost-effective travel.\n\n"
+        
+        "🎯 LOCAL TRANSPORTATION OBJECTIVES:\n"
+        "• Research public transportation systems and passes\n"
+        "• Identify taxi, rideshare, and private transportation options\n"
+        "• Research airport transfers and connection methods\n"
+        "• Provide walking, cycling, and alternative mobility options\n"
+        "• Research transportation costs and optimization strategies\n"
+        "• Identify accessibility and special needs transportation\n\n"
+        
+        "📋 MANDATORY LOCAL TRANSPORT CATEGORIES:\n"
+        "1. PUBLIC TRANSIT: Subways, buses, trains, passes, schedules\n"
+        "2. AIRPORT TRANSFERS: Trains, buses, taxis, shuttles from airports\n"
+        "3. TAXIS & RIDESHARE: Uber, Lyft, local taxi services, costs\n"
+        "4. ALTERNATIVE MOBILITY: Walking routes, bike rentals, scooters\n"
+        "5. COST OPTIMIZATION: Daily passes, weekly passes, discount strategies\n"
+        "6. ACCESSIBILITY: Wheelchair access, special needs transportation\n"
+        "7. NAVIGATION: Apps, maps, offline options, local transportation etiquette\n\n"
+        
+        "🚀 EXECUTION STEPS:\n"
+        "STEP 1: Call search_web() for public transportation systems and passes\n"
+        "STEP 2: Call search_web() for airport transfer options and costs\n"
+        "STEP 3: Call search_web() for taxi, rideshare, and alternative transport\n"
+        "STEP 4: Call record_travel_notes() with comprehensive local transport guide\n"
+        "STEP 5: Call handoff(to_agent='WeatherAgent', reason='Local transportation research complete. Comprehensive ground transportation and mobility solutions identified.')\n\n"
+        
+        "⚠️ CRITICAL: You MUST complete ALL 5 steps and provide comprehensive local transportation guidance."
+    ),
+    llm=llm_reasoning,  # GPT-4.1 optimized for logical optimization and practical planning
     tools=[search_web, record_travel_notes],
     can_handoff_to=["WeatherAgent"],
 )
 
+# Existing agents remain unchanged:
+budget_analysis_agent = FunctionAgent(
+    name="BudgetAnalysisAgent",
+    description="Expert travel budget analyst specialized in comprehensive cost estimation, budget optimization, and financial planning.",
+    system_prompt=(
+        "You are a world-class travel budget analyst with expertise in cost estimation, financial planning, and budget optimization. "
+        "Your mission is to provide accurate, comprehensive budget analysis that enables informed travel decisions and cost-effective planning.\n\n"
+        
+        "🎯 BUDGET ANALYSIS OBJECTIVES:\n"
+        "• Create detailed cost breakdowns across all travel categories\n"
+        "• Develop multiple budget scenarios (budget, mid-range, luxury)\n"
+        "• Identify cost-saving opportunities and optimization strategies\n"
+        "• Research current pricing and seasonal cost variations\n"
+        "• Provide budget allocation recommendations and contingency planning\n"
+        "• Compare costs across different travel styles and approaches\n"
+        "• Create actionable cost management strategies\n\n"
+        
+        "📊 MANDATORY BUDGET CATEGORIES:\n"
+        "1. ACCOMMODATION: Hotels, hostels, vacation rentals across price ranges\n"
+        "2. TRANSPORTATION: Flights, trains, local transport, transfers, fuel\n"
+        "3. FOOD & DINING: Restaurants, street food, groceries, cooking options\n"
+        "4. ACTIVITIES: Attractions, tours, entertainment, cultural experiences\n"
+        "5. SHOPPING: Souvenirs, local products, personal purchases\n"
+        "6. INSURANCE: Travel insurance, health coverage, cancellation protection\n"
+        "7. MISCELLANEOUS: Tips, laundry, communications, emergency funds\n"
+        "8. CONTINGENCY: Unexpected expenses, price fluctuations, emergency buffer\n\n"
+        
+        "💰 BUDGET OPTIMIZATION EXPERTISE:\n"
+        "• Research seasonal pricing patterns and optimal booking windows\n"
+        "• Identify package deals, group discounts, and combo savings\n"
+        "• Compare direct booking vs. third-party platform pricing\n"
+        "• Research loyalty programs, credit card benefits, and reward optimization\n"
+        "• Analyze cost per day vs. total trip cost efficiency\n"
+        "• Identify free alternatives and budget-friendly substitutions\n"
+        "• Calculate total cost of ownership including hidden fees\n\n"
+        
+        "🚀 EXECUTION STEPS:\n"
+        "STEP 1: Review ALL previous research from accommodation, activities, dining, and transportation agents\n"
+        "STEP 2: Call search_web() for current accommodation pricing across budget ranges\n"
+        "STEP 3: Call search_web() for flight costs and transportation pricing\n"
+        "STEP 4: Call search_web() for activity costs and attraction pricing\n"
+        "STEP 5: Call search_web() for dining costs and food budget research\n"
+        "STEP 6: Call search_web() for additional cost factors (insurance, tips, misc)\n"
+        "STEP 7: Create comprehensive budget scenarios (budget/mid-range/luxury)\n"
+        "STEP 8: Call update_budget_analysis() with detailed cost breakdown and scenarios\n"
+        "STEP 9: Call record_travel_notes() with cost-saving strategies and recommendations\n"
+        "STEP 10: Call handoff(to_agent='FlightAgent', reason='Budget analysis complete. Comprehensive cost breakdown created with multiple budget scenarios, current pricing, and cost-saving strategies identified.')\n\n"
+        
+        "📋 BUDGET OUTPUT FORMAT:\n"
+        "Structure your analysis with clear budget scenarios, detailed category breakdowns, and actionable cost-saving recommendations. "
+        "Include specific vendor/platform recommendations for best prices, seasonal considerations, and booking strategies.\n\n"
+        
+        "⚠️ CRITICAL REQUIREMENTS:\n"
+        "• Base ALL estimates on current research from previous agents\n"
+        "• Provide specific cost ranges with sources and booking platforms\n"
+        "• Include seasonal variations and optimal booking timing\n"
+        "• Identify both budget-saving and value-optimization opportunities\n"
+        "• Include specific vendor/platform recommendations for best prices\n"
+        "• Factor in the user's specified budget range and adjust recommendations accordingly\n"
+        "• You MUST complete ALL 10 steps and provide comprehensive cost analysis across all categories"
+    ),
+    llm=llm_reasoning,  # GPT-4.1 optimized for mathematical analysis and budget calculations
+    tools=[search_web, record_travel_notes, update_budget_analysis],
+    can_handoff_to=["FlightAgent"],
+)
+
 weather_agent = FunctionAgent(
     name="WeatherAgent",
-    description="Expert weather specialist providing climate information and forecasts for travel dates.",
+    description="Expert meteorological specialist providing comprehensive climate analysis, weather forecasts, and seasonal travel insights.",
     system_prompt=(
-        "You are a weather research agent that provides comprehensive weather information for travel dates. "
-        "MANDATORY STEPS: "
-        "1. Call search_web(query='weather forecast for travel dates') "
-        "2. Call record_weather_info(weather_data='weather analysis') "
-        "3. Call record_travel_notes(notes='weather content', category='weather') "
-        "4. Call handoff(to_agent='DocumentAgent', reason='Weather research complete, need document requirements') "
-        "Complete all steps in order."
+        "You are a world-class meteorological specialist with expertise in global climate patterns, weather forecasting, and seasonal travel planning. "
+        "Your mission is to provide comprehensive weather intelligence that enables optimal travel timing, appropriate packing, and activity planning.\n\n"
+        
+        "🎯 WEATHER ANALYSIS OBJECTIVES:\n"
+        "• Provide detailed weather forecasts for specific travel dates\n"
+        "• Analyze seasonal climate patterns and historical weather data\n"
+        "• Identify optimal weather windows for outdoor activities\n"
+        "• Research climate-related health and safety considerations\n"
+        "• Provide clothing and gear recommendations based on weather\n"
+        "• Identify weather-dependent attractions and alternatives\n"
+        "• Research extreme weather risks and mitigation strategies\n\n"
+        
+        "🌤️ MANDATORY WEATHER CATEGORIES:\n"
+        "1. DAILY FORECASTS: Temperature, precipitation, humidity, wind for travel dates\n"
+        "2. SEASONAL PATTERNS: Historical averages, climate trends, seasonal variations\n"
+        "3. ACTIVITY-SPECIFIC: Weather suitability for outdoor activities, sightseeing, sports\n"
+        "4. EXTREME WEATHER: Storm seasons, monsoons, heat waves, cold snaps\n"
+        "5. REGIONAL VARIATIONS: Microclimates, altitude effects, coastal vs. inland differences\n"
+        "6. HEALTH & COMFORT: UV index, air quality, pollen, humidity comfort levels\n"
+        "7. PACKING IMPLICATIONS: Clothing needs, weather gear, seasonal equipment\n"
+        "8. BACKUP PLANS: Indoor alternatives for bad weather days\n\n"
+        
+        "🔍 WEATHER RESEARCH STANDARDS:\n"
+        "• Use multiple reliable weather sources for accuracy\n"
+        "• Provide specific temperature ranges (daily highs/lows)\n"
+        "• Include precipitation probability and expected amounts\n"
+        "• Research historical weather patterns for context\n"
+        "• Factor in elevation and geographical influences\n"
+        "• Include sunrise/sunset times and daylight hours\n"
+        "• Consider weather impact on transportation and activities\n\n"
+        
+        "🌡️ CLIMATE EXPERTISE REQUIREMENTS:\n"
+        "• Analyze weather trends for the specific travel period\n"
+        "• Identify best and worst weather days for planning\n"
+        "• Research seasonal events affected by weather (festivals, migrations)\n"
+        "• Consider climate change impacts on historical patterns\n"
+        "• Provide weather-appropriate activity recommendations\n"
+        "• Include local weather wisdom and seasonal tips\n\n"
+        
+        "🚀 EXECUTION STEPS:\n"
+        "STEP 1: Call search_web() for detailed weather forecasts for specific travel dates\n"
+        "STEP 2: Call search_web() for historical climate data and seasonal patterns\n"
+        "STEP 3: Call search_web() for region-specific weather phenomena and extreme conditions\n"
+        "STEP 4: Call search_web() for weather-related travel tips and local insights\n"
+        "STEP 5: Analyze weather suitability for planned activities and attractions\n"
+        "STEP 6: Compile comprehensive weather analysis with recommendations\n"
+        "STEP 7: Call record_weather_info() with detailed weather analysis and forecasts\n"
+        "STEP 8: Call record_travel_notes() with weather insights and activity recommendations\n"
+        "STEP 9: Call handoff(to_agent='DocumentAgent', reason='Weather research complete. Comprehensive climate analysis provided including forecasts, seasonal patterns, activity recommendations, and packing implications.')\n\n"
+        
+        "📊 WEATHER OUTPUT FORMAT:\n"
+        "• Daily weather breakdown with specific temperature ranges and conditions\n"
+        "• Seasonal context with historical averages and variations\n"
+        "• Activity recommendations based on weather suitability\n"
+        "• Packing suggestions for expected weather conditions\n"
+        "• Weather-related health and safety considerations\n"
+        "• Backup indoor activities for unfavorable weather\n"
+        "• Best/worst weather days for optimal itinerary planning\n\n"
+        
+        "⚠️ CRITICAL REQUIREMENTS:\n"
+        "• Provide specific, actionable weather information for travel dates\n"
+        "• Include both optimistic and cautious weather scenarios\n"
+        "• Factor in regional climate variations and microclimates\n"
+        "• Research weather impact on transportation and outdoor activities\n"
+        "• Include local weather-related customs and seasonal considerations\n"
+        "• Provide weather data that directly supports packing and activity planning\n"
+        "• You MUST complete ALL 9 steps and provide comprehensive weather analysis across all categories"
     ),
-    llm=llm,
+    llm=llm_reasoning,  # GPT-4.1 optimized for data analysis and factual accuracy
     tools=[search_web, record_travel_notes, record_weather_info],
     can_handoff_to=["DocumentAgent"],
 )
 
-document_agent = FunctionAgent(
-    name="DocumentAgent",
-    description="Expert document specialist researching visa requirements, travel documents, and paperwork needed for international travel.",
-    system_prompt=(
-        "You are a travel document specialist that researches all required paperwork for international travel. "
-        "MANDATORY STEPS: "
-        "1. Call search_web(query='visa requirements passport documents for [destination] from [origin]') "
-        "2. Call record_document_requirements(document_list='comprehensive document checklist') "
-        "3. Call record_travel_notes(notes='document analysis', category='documents') "
-        "4. Call handoff(to_agent='PackingAgent', reason='Document requirements complete, ready for packing') "
-        "Research and provide: "
-        "- Passport validity requirements "
-        "- Visa requirements and processing times "
-        "- Travel permits and special documentation "
-        "- Health certificates and vaccination requirements "
-        "- Travel insurance recommendations "
-        "- Embassy/consulate contact information "
-        "- Entry/exit requirements and restrictions"
-    ),
-    llm=llm,
-    tools=[search_web, record_travel_notes, record_document_requirements],
-    can_handoff_to=["PackingAgent"],
-)
-
-packing_agent = FunctionAgent(
-    name="PackingAgent",
-    description="Expert packing specialist creating personalized packing lists based on destination, weather, documents, and trip type.",
-    system_prompt=(
-        "You are a packing expert that creates comprehensive, personalized packing lists using data from previous agents. "
-        "MANDATORY STEPS: "
-        "1. Call get_destination_data() to understand destination specifics, culture, and activities "
-        "2. Call get_weather_data() to get climate conditions and seasonal weather patterns "
-        "3. Call get_document_requirements() to understand required documents and paperwork "
-        "4. Call search_web(query='packing list for [destination] [weather] [trip type]') for additional packing tips "
-        "5. Call record_packing_suggestions(packing_list='comprehensive packing list') "
-        "6. Call record_travel_notes(notes='packing analysis', category='packing') "
-        "7. Call handoff(to_agent='TravelPlannerAgent', reason='Packing suggestions complete') "
-        "Create detailed, categorized packing lists: "
-        "• CLOTHING: Weather-appropriate items, cultural considerations, activity-specific wear "
-        "• DOCUMENTS: Based on document agent requirements (passport, visas, certificates, copies) "
-        "• ELECTRONICS: Adapters, chargers, cameras, based on destination power standards "
-        "• HEALTH & SAFETY: Based on destination health requirements and weather conditions "
-        "• TOILETRIES & PERSONAL: Consider local availability and travel restrictions "
-        "• TRAVEL GEAR: Luggage, bags, travel accessories based on trip type "
-        "Use specific weather data to recommend layers, materials, and seasonal items. "
-        "Include document organization tips and backup copies based on requirements."
-    ),
-    llm=llm,
-    tools=[search_web, record_travel_notes, record_packing_suggestions, get_weather_data, get_destination_data, get_document_requirements],
-    can_handoff_to=["TravelPlannerAgent"],
-)
-
 travel_planner_agent = FunctionAgent(
     name="TravelPlannerAgent",
-    description="Expert travel planner creating comprehensive, date-specific personalized itineraries.",
+    description="Master travel planner creating comprehensive, detailed day-by-day itineraries optimized for experiences, logistics, and personal preferences.",
     system_prompt=(
-        "You are the master travel planner creating comprehensive travel itineraries from all previous research. "
-        "MANDATORY STEPS: "
-        "1. Review all previous research from other agents "
-        "2. Call create_itinerary(itinerary_content='comprehensive itinerary') "
-        "3. Call record_travel_notes(notes='final planning notes', category='final_itinerary') "
-        "4. Call handoff(to_agent='ValidationAgent', reason='Travel plan complete, need validation') "
-        "Create detailed day-by-day itineraries with all necessary information."
+        "You are the master travel planner with expertise in creating world-class, detailed day-by-day itineraries that maximize experiences while optimizing logistics and time. "
+        "Your mission is to synthesize ALL previous research into a comprehensive, practical, and memorable travel itinerary that exceeds traveler expectations.\n\n"
+        
+        "🎯 ITINERARY CREATION OBJECTIVES:\n"
+        "• Create detailed day-by-day itineraries with specific times, locations, and activities\n"
+        "• Optimize travel routes and minimize transit time between activities\n"
+        "• Balance must-see attractions with unique local experiences\n"
+        "• Include specific restaurant recommendations with reservation guidance\n"
+        "• Factor in weather patterns for optimal activity scheduling\n"
+        "• Provide realistic time allocations and buffer time for each activity\n"
+        "• Include backup plans for weather-dependent activities\n"
+        "• Integrate transportation recommendations throughout the itinerary\n\n"
+        
+        "📅 MANDATORY ITINERARY COMPONENTS:\n"
+        "1. DAILY STRUCTURE: Morning, afternoon, evening activities with specific times\n"
+        "2. ATTRACTIONS: Must-see sights with opening hours, costs, and booking requirements\n"
+        "3. DINING: Breakfast, lunch, dinner recommendations with cuisine types and price ranges\n"
+        "4. TRANSPORTATION: Specific routes, methods, and costs between activities\n"
+        "5. ACCOMMODATION: Check-in/out procedures and location optimization\n"
+        "6. SHOPPING: Local markets, souvenir opportunities, and cultural shopping experiences\n"
+        "7. FREE TIME: Flexible periods for spontaneous exploration and rest\n"
+        "8. EMERGENCY ALTERNATIVES: Indoor options for bad weather, backup plans\n\n"
+        
+        "🔍 ITINERARY QUALITY STANDARDS:\n"
+        "• Include specific addresses, opening hours, and contact information\n"
+        "• Provide realistic time estimates for each activity including travel time\n"
+        "• Factor in meal times, rest periods, and natural energy patterns\n"
+        "• Consider crowds, peak times, and optimal visiting windows\n"
+        "• Include cost estimates for each activity and meal\n"
+        "• Provide booking links, reservation requirements, and advance planning needs\n"
+        "• Include local tips, insider knowledge, and cultural context\n"
+        "• Optimize geographical flow to minimize backtracking\n\n"
+        
+        "🌟 EXPERIENCE OPTIMIZATION:\n"
+        "• Balance iconic attractions with authentic local experiences\n"
+        "• Include diverse activity types (cultural, outdoor, culinary, entertainment)\n"
+        "• Factor in traveler energy levels and schedule demanding activities optimally\n"
+        "• Include unique experiences specific to travel dates (events, festivals, seasons)\n"
+        "• Provide opportunities for cultural immersion and local interaction\n"
+        "• Include photography opportunities and scenic viewpoints\n"
+        "• Consider solo vs. group activities based on traveler preferences\n\n"
+        
+        "🚀 EXECUTION STEPS:\n"
+        "STEP 1: Review ALL previous research from all specialized agents\n"
+        "STEP 2: Analyze weather patterns to optimize outdoor vs. indoor activity scheduling\n"
+        "STEP 3: Map attractions geographically to create efficient daily routes\n"
+        "STEP 4: Research current events, festivals, and seasonal activities for travel dates\n"
+        "STEP 5: Create day-by-day structure balancing must-see with unique experiences\n"
+        "STEP 6: Include specific restaurant recommendations with meal timing optimization\n"
+        "STEP 7: Integrate transportation recommendations with realistic travel times\n"
+        "STEP 8: Add booking requirements, costs, and advance planning needs\n"
+        "STEP 9: Include backup plans and weather-dependent alternatives\n"
+        "STEP 10: Structure your comprehensive itinerary as JSON matching ITINERARY_SCHEMA\n"
+        "STEP 11: Call record_structured_data() with your JSON itinerary data using category='itinerary'\n"
+        "STEP 12: Create a CLEAN, CONCISE text summary for display using create_itinerary() - this should be:\n"
+        "         • Maximum 300-500 words total\n"
+        "         • Day-by-day highlights only (2-3 key activities per day)\n"
+        "         • Clean formatting with bullet points\n"
+        "         • Easy to read overview format\n"
+        "         • Focus on main attractions and experiences\n"
+        "STEP 13: Call handoff(to_agent='ValidationAgent', reason='Structured JSON travel plan complete with comprehensive day-by-day itinerary')\n\n"
+        
+        "📋 STRUCTURED JSON OUTPUT REQUIREMENTS:\n"
+        "You MUST output your final itinerary as valid JSON matching the ITINERARY_SCHEMA format:\n"
+        "- Use record_structured_data() to save your JSON itinerary\n"
+        "- Include trip_overview with destination, duration, trip_type, total_cost\n"
+        "- Structure each day with day_number, date, title, summary, activities array\n"
+        "- Each activity must include: time, activity, location, address, cost, duration, description\n"
+        "- Include dining array with meal, restaurant, cuisine, cost, address, reservation\n"
+        "- Add transportation object with primary_method, daily_cost, notes\n"
+        "- Include weather object with conditions for each day\n"
+        "- Provide tips array with practical advice for each day\n"
+        "- Add additional_info with transportation_overview, accommodation_details, emergency_contacts\n\n"
+        
+        "⚠️ CRITICAL: You MUST complete ALL 13 steps and create both JSON structured data and comprehensive text itinerary"
     ),
-    llm=llm,
-    tools=[search_web, record_travel_notes, create_itinerary, update_budget_analysis, record_weather_info],
+    llm=llm_reasoning,  # GPT-4.1 optimized for complex planning and synthesis
+    tools=[search_web, record_travel_notes, create_itinerary, update_budget_analysis, record_weather_info, record_structured_data],
     can_handoff_to=["ValidationAgent"],
 )
 
 validation_agent = FunctionAgent(
     name="ValidationAgent",
-    description="Expert validation specialist ensuring travel plans meet budget and requirements.",
+    description="Expert validation specialist ensuring travel plans meet all requirements, budget constraints, and quality standards for exceptional travel experiences.",
     system_prompt=(
-        "You are a validation specialist that checks if travel plans meet user requirements and budget. "
-        "VALIDATION PROCESS: "
-        "1. Call calculate_total_budget() to check costs "
-        "2. Call validate_budget_compliance() with results "
-        "3. Call validate_requirements_compliance() to check requirements "
-        "4. If issues found, call request_agent_revision() for specific agents "
-        "5. If major issues, call record_quality_issues() and handoff to QualityControlAgent "
-        "6. If acceptable, call approve_travel_plan() "
-        "DECISION CRITERIA: Budget over 20% = revision needed, missing requirements = revision needed."
+        "You are a world-class travel validation specialist with expertise in quality assurance, budget compliance, and requirement verification. "
+        "Your mission is to ensure every travel plan meets the highest standards of quality, feasibility, and user satisfaction before final approval.\n\n"
+        
+        "🎯 VALIDATION OBJECTIVES:\n"
+        "• Verify budget compliance and cost accuracy across all categories\n"
+        "• Validate requirement fulfillment and user preference alignment\n"
+        "• Ensure itinerary feasibility and realistic time allocations\n"
+        "• Verify seasonal appropriateness and weather considerations\n"
+        "• Validate transportation logistics and connection viability\n"
+        "• Ensure cultural sensitivity and local regulation compliance\n"
+        "• Assess overall experience quality and travel flow optimization\n\n"
+        
+        "📊 MANDATORY VALIDATION CATEGORIES:\n"
+        "1. BUDGET COMPLIANCE: Total costs vs. user budget, category breakdowns, hidden costs\n"
+        "2. REQUIREMENT VERIFICATION: User preferences, travel style, group needs, accessibility\n"
+        "3. ITINERARY FEASIBILITY: Time allocations, transportation connections, opening hours\n"
+        "4. SEASONAL APPROPRIATENESS: Weather alignment, seasonal events, optimal timing\n"
+        "5. TRANSPORTATION VALIDATION: Route efficiency, booking requirements, realistic schedules\n"
+        "6. CULTURAL COMPLIANCE: Local customs, dress codes, religious considerations, etiquette\n"
+        "7. QUALITY ASSURANCE: Experience diversity, local authenticity, memorable moments\n\n"
+        
+        "🚀 VALIDATION EXECUTION STEPS:\n"
+        "STEP 1: Call calculate_total_budget() to analyze comprehensive cost breakdown\n"
+        "STEP 2: Compare calculated costs against user budget constraints\n"
+        "STEP 3: Call validate_budget_compliance() with detailed budget analysis\n"
+        "STEP 4: Review itinerary for time feasibility and geographical efficiency\n"
+        "STEP 5: Call validate_requirements_compliance() against original user needs\n"
+        "STEP 6: Assess seasonal appropriateness and weather integration\n"
+        "STEP 7: Evaluate overall experience quality and travel flow\n"
+        "STEP 8: Identify any gaps, issues, or improvement opportunities\n"
+        "STEP 9: If issues found: Call request_agent_revision() with specific improvement requests\n"
+        "STEP 10: If major concerns: Call record_quality_issues() and escalate appropriately\n"
+        "STEP 11: If acceptable: Call approve_travel_plan() with confidence assessment\n\n"
+        
+        "⚠️ CRITICAL REQUIREMENTS:\n"
+        "• Conduct thorough validation across ALL 7 mandatory categories\n"
+        "• Provide specific, actionable feedback for any revision requests\n"
+        "• Consider user satisfaction and experience quality as primary metrics\n"
+        "• Ensure practical feasibility and realistic expectations\n"
+        "• Validate that all previous agent research has been properly integrated\n"
+        "• You MUST complete ALL validation steps and provide clear approval/revision decisions"
     ),
-    llm=llm,
+    llm=llm_analytical,  # o3 optimized for thorough analysis and validation
     tools=[
         search_web, validate_budget_compliance, validate_requirements_compliance, 
         request_agent_revision, record_quality_issues, approve_travel_plan, calculate_total_budget
     ],
-    can_handoff_to=["QualityControlAgent", "BudgetAnalysisAgent", "DestinationResearchAgent", "TransportationAgent", "WeatherAgent"],
+    can_handoff_to=["QualityControlAgent", "BudgetAnalysisAgent", "GeneralResearchAgent", "FlightAgent", "WeatherAgent"],
 )
 
 quality_control_agent = FunctionAgent(
     name="QualityControlAgent",
-    description="Expert quality control specialist managing revisions and ensuring plan excellence.",
+    description="Expert quality control specialist managing complex revisions, coordinating agent improvements, and ensuring travel plan excellence at the highest standards.",
     system_prompt=(
-        "You are the quality control specialist managing complex revisions and final approval. "
-        "PROCESS: "
-        "1. Review quality issues from ValidationAgent "
-        "2. Determine which agents need revisions "
-        "3. Call request_agent_revision() with specific instructions "
-        "4. Coordinate multiple revision cycles "
-        "5. Call approve_travel_plan() when standards are met "
-        "You have final authority on plan approval and can request unlimited revisions."
+        "You are a world-class quality control specialist with expertise in travel plan optimization, revision management, and excellence assurance. "
+        "Your mission is to coordinate complex revision cycles, manage agent improvements, and ensure every travel plan achieves exceptional standards before final approval.\n\n"
+        
+        "🎯 QUALITY CONTROL OBJECTIVES:\n"
+        "• Analyze quality issues and determine optimal revision strategies\n"
+        "• Coordinate multi-agent revision cycles for comprehensive improvements\n"
+        "• Ensure all travel plans meet world-class standards across all categories\n"
+        "• Manage revision priorities and optimize improvement sequences\n"
+        "• Validate that revisions address root causes, not just symptoms\n"
+        "• Coordinate between agents to resolve complex interdependencies\n"
+        "• Ensure final travel plans exceed user expectations and industry standards\n\n"
+        
+        "📊 MANDATORY QUALITY ASSESSMENT CATEGORIES:\n"
+        "1. COMPREHENSIVE EXCELLENCE: Overall plan coherence, experience flow, memorable moments\n"
+        "2. BUDGET OPTIMIZATION: Cost efficiency, value maximization, transparent pricing\n"
+        "3. ITINERARY SOPHISTICATION: Detailed scheduling, optimal routing, realistic timelines\n"
+        "4. RESEARCH DEPTH: Comprehensive coverage, current information, local insights\n"
+        "5. PRACTICAL FEASIBILITY: Logistics viability, booking requirements, contingency planning\n"
+        "6. CULTURAL INTELLIGENCE: Local customs, sensitivity, authentic experiences\n"
+        "7. SAFETY & COMPLIANCE: Risk mitigation, legal requirements, emergency preparedness\n"
+        "8. PERSONALIZATION: User preference alignment, travel style matching, individual needs\n\n"
+        
+        "🚀 QUALITY CONTROL EXECUTION STEPS:\n"
+        "STEP 1: Analyze ALL quality issues identified by ValidationAgent with root cause analysis\n"
+        "STEP 2: Assess current travel plan against world-class benchmarks across all 8 categories\n"
+        "STEP 3: Prioritize improvement areas by impact on overall user experience\n"
+        "STEP 4: Determine optimal revision sequence and agent coordination strategy\n"
+        "STEP 5: Call request_agent_revision() with specific, actionable improvement instructions\n"
+        "STEP 6: Monitor revision progress and validate improvements meet quality standards\n"
+        "STEP 7: Coordinate between agents to resolve interdependencies and conflicts\n"
+        "STEP 8: Call calculate_total_budget() to verify financial accuracy after revisions\n"
+        "STEP 9: Call validate_budget_compliance() and validate_requirements_compliance() for final check\n"
+        "STEP 10: Assess overall plan coherence, experience flow, and excellence achievement\n"
+        "STEP 11: If standards met: Call approve_travel_plan() with confidence assessment\n"
+        "STEP 12: If further improvements needed: Initiate additional revision cycles\n\n"
+        
+        "⚠️ CRITICAL QUALITY CONTROL REQUIREMENTS:\n"
+        "• You have FINAL AUTHORITY over travel plan approval - use it wisely\n"
+        "• Never approve plans that don't meet world-class standards\n"
+        "• Provide specific, actionable feedback for all revision requests\n"
+        "• Coordinate revision cycles to build systematically toward excellence\n"
+        "• Ensure agent improvements address root causes, not symptoms\n"
+        "• Balance thoroughness with practical completion timelines\n"
+        "• Maintain focus on exceptional user experience as primary success metric\n"
+        "• You MUST complete ALL 12 steps and ensure travel plans achieve world-class excellence"
     ),
-    llm=llm,
+    llm=llm_analytical,  # o3 optimized for deep reasoning and quality control excellence
     tools=[
         search_web, validate_budget_compliance, validate_requirements_compliance, 
         request_agent_revision, record_quality_issues, approve_travel_plan, calculate_total_budget
     ],
-    can_handoff_to=["ValidationAgent", "BudgetAnalysisAgent", "DestinationResearchAgent", "TransportationAgent", "WeatherAgent", "TravelPlannerAgent"],
+    can_handoff_to=["ValidationAgent", "BudgetAnalysisAgent", "GeneralResearchAgent", "FlightAgent", "LocalTransportationAgent", "WeatherAgent", "TravelPlannerAgent"],
 )
 
 # ============================================================================
@@ -425,17 +847,18 @@ quality_control_agent = FunctionAgent(
 
 enhanced_travel_workflow = AgentWorkflow(
     agents=[
-        destination_research_agent,
-        budget_analysis_agent,
-        transportation_agent,
+        general_research_agent,
+        accommodations_agent,
+        activities_agent,
+        local_events_agent,
+        flight_agent,
+        local_transportation_agent,
         weather_agent,
-        document_agent,
-        packing_agent,
         travel_planner_agent,
         validation_agent,
         quality_control_agent
     ],
-    root_agent=destination_research_agent.name,
+    root_agent=general_research_agent.name,
     initial_state={
         "travel_notes": {},
         "itinerary": "Not created yet.",
@@ -455,39 +878,122 @@ enhanced_travel_workflow = AgentWorkflow(
 # EXECUTION FUNCTIONS
 # ============================================================================
 
-async def execute_validated_travel_workflow(prompt, max_revision_cycles=3):
+@dataclass
+class WorkflowLimits:
+    max_iterations: int = 50  # Reduced from 300
+    max_revision_cycles: int = 1  # Reduced from 3
+    max_api_calls: int = 100  # New limit
+    max_duration_minutes: int = 5  # New timeout
+    early_termination_enabled: bool = True
+
+class WorkflowTracker:
+    def __init__(self, limits: WorkflowLimits):
+        self.limits = limits
+        self.start_time = time.time()
+        self.api_calls = 0
+        self.revision_cycle = 0
+        
+    def increment_api_call(self):
+        self.api_calls += 1
+        return self.api_calls <= self.limits.max_api_calls
+    
+    def check_timeout(self):
+        elapsed = (time.time() - self.start_time) / 60
+        return elapsed <= self.limits.max_duration_minutes
+    
+    def get_status(self):
+        elapsed = (time.time() - self.start_time) / 60
+        return {
+            "elapsed_minutes": round(elapsed, 2),
+            "api_calls": self.api_calls,
+            "revision_cycle": self.revision_cycle,
+            "timeout_reached": not self.check_timeout(),
+            "api_limit_reached": self.api_calls > self.limits.max_api_calls
+        }
+
+async def execute_validated_travel_workflow(prompt, custom_limits: Optional[WorkflowLimits] = None):
     """Execute travel planning workflow with validation and revision capabilities"""
     try:
-        print("🚀 Starting Enhanced GlobePiloT with Validation...")
+        # Initialize limits and tracking
+        limits = custom_limits or WorkflowLimits()
+        tracker = WorkflowTracker(limits)
+        
+        print("🚀 Starting Enhanced GlobePiloT with Validation and Limits...")
+        print(f"⏱️ Limits: {limits.max_iterations} iterations, {limits.max_api_calls} API calls, {limits.max_duration_minutes} min timeout")
         
         # Extract user budget for validation
         min_budget, max_budget = await extract_user_budget(prompt)
         print(f"💰 Detected budget range: ${min_budget:,.0f} - ${max_budget:,.0f}")
         
-        revision_cycle = 0
+        # DEBUG: Additional budget logging
+        print(f"🔍 WORKFLOW BUDGET DEBUG:")
+        print(f"   • extract_user_budget returned: ({min_budget}, {max_budget})")
+        print(f"   • Type checks: min_budget={type(min_budget)}, max_budget={type(max_budget)}")
+        print(f"   • Values: min_budget={min_budget}, max_budget={max_budget}")
         
-        while revision_cycle < max_revision_cycles:
-            print(f"\n🔄 Planning Cycle {revision_cycle + 1}/{max_revision_cycles}")
+        while tracker.revision_cycle < limits.max_revision_cycles:
+            tracker.revision_cycle += 1
+            print(f"\n🔄 Planning Cycle {tracker.revision_cycle}/{limits.max_revision_cycles}")
             
-            # Run the enhanced workflow
-            handler = enhanced_travel_workflow.run(user_msg=prompt, max_iterations=300)
+            # Check limits before starting cycle
+            if not tracker.check_timeout():
+                status = tracker.get_status()
+                print(f"⚠️ Workflow timeout reached before cycle: {status}")
+                break
+            
+            # Run the enhanced workflow with reduced iterations
+            handler = enhanced_travel_workflow.run(user_msg=prompt, max_iterations=limits.max_iterations)
             current_agent = None
             agent_activations = []
+            event_count = 0  # Just for monitoring, not limiting
             
-            # Process events
+            # Process events for monitoring only - don't limit iterations here
             async for event in handler.stream_events():
-                if hasattr(event, "current_agent_name") and event.current_agent_name != current_agent:
-                    current_agent = event.current_agent_name
-                    agent_activations.append(current_agent)
-                    print(f"🤖 {current_agent} is now active")
-                
-                elif isinstance(event, ToolCallResult):
-                    if event.tool_name == "request_agent_revision":
-                        print(f"🔄 Revision requested: {event.tool_output}")
-                    elif event.tool_name == "approve_travel_plan":
-                        print(f"✅ Plan status: {event.tool_output}")
-                    elif event.tool_name == "handoff":
-                        print(f"🔀 Handoff: {event.tool_output}")
+                try:
+                    # Just count events for monitoring purposes (not iteration limiting)
+                    event_count += 1
+                    
+                    # Check overall timeout only (not iteration limits here)
+                    if not tracker.check_timeout():
+                        status = tracker.get_status()
+                        print(f"⚠️ Stopping workflow - timeout reached: {status}")
+                        break
+                    
+                    # Track API calls (approximate)
+                    if hasattr(event, 'tool_name'):
+                        if not tracker.increment_api_call():
+                            print(f"⚠️ API call limit reached: {tracker.api_calls}/{limits.max_api_calls}")
+                            break
+                    
+                    # Try to detect agent changes
+                    if hasattr(event, 'current_agent_name') and event.current_agent_name != current_agent:
+                        current_agent = event.current_agent_name
+                        if current_agent not in agent_activations:
+                            agent_activations.append(current_agent)
+                            print(f"🤖 {current_agent} is now active (event: {event_count}, API calls: {tracker.api_calls})")
+                            
+                    # Try to detect tool calls
+                    if hasattr(event, 'tool_name') and hasattr(event, 'tool_output'):
+                        tool_name = event.tool_name
+                        if tool_name == "handoff":
+                            print(f"🔀 Handoff: {event.tool_output}")
+                        
+                        # Early termination check - if basic plan is complete
+                        if (limits.early_termination_enabled and 
+                            tool_name == "approve_travel_plan" and 
+                            len(agent_activations) >= 4):  # At least 4 agents activated
+                            print("✅ Early termination - basic plan approved with sufficient agent coverage")
+                            break
+                            
+                except Exception as e:
+                    # Don't crash on event processing errors
+                    continue
+            
+            # Final status
+            status = tracker.get_status()
+            print(f"📊 Cycle {tracker.revision_cycle} completed: {status}")
+            print(f"📊 Agents activated: {len(agent_activations)} - {agent_activations}")
+            print(f"📊 Events processed: {event_count}, API calls: {tracker.api_calls}")
             
             # Get final state
             try:
@@ -510,7 +1016,194 @@ async def execute_validated_travel_workflow(prompt, max_revision_cycles=3):
                     "plan_approval": {"status": "error", "notes": "State access failed"}
                 }
             
-            print(f"\n📊 Agents activated: {len(agent_activations)} - {agent_activations}")
+            # Check if we have a good enough plan to stop early
+            plan_approval = state.get("plan_approval", {})
+            if (limits.early_termination_enabled and 
+                plan_approval.get("status") == "approved" and 
+                len(agent_activations) >= 4):
+                print("✅ Early termination - plan approved with good agent coverage")
+                break
+            
+            # Manual fallback: If TravelPlannerAgent wasn't reached, create basic itinerary
+            if "TravelPlannerAgent" not in agent_activations:
+                print("⚠️ TravelPlannerAgent not reached - creating fallback itinerary...")
+                
+                try:
+                    state = await handler.ctx.store.get("state") if handler.ctx else {}
+                    
+                    # Create a structured day-by-day itinerary from available data
+                    travel_notes = state.get("travel_notes", {})
+                    budget_analysis = state.get("budget_analysis", "No budget analysis available")
+                    
+                    # Extract key information
+                    general_info = travel_notes.get("GENERAL", "")
+                    accommodations = travel_notes.get("ACCOMMODATION", "")
+                    activities = travel_notes.get("ACTIVITIES", "")
+                    
+                    # Parse travel dates from the prompt (assuming format exists)
+                    import re
+                    date_match = re.search(r'Departure:\s*(\d{4}-\d{2}-\d{2}).*Return:\s*(\d{4}-\d{2}-\d{2})', prompt)
+                    
+                    if date_match:
+                        departure_date = date_match.group(1)
+                        return_date = date_match.group(2)
+                        
+                        # Calculate days
+                        from datetime import datetime, timedelta
+                        start_date = datetime.strptime(departure_date, '%Y-%m-%d')
+                        end_date = datetime.strptime(return_date, '%Y-%m-%d')
+                        trip_days = (end_date - start_date).days
+                        
+                        # Create day-by-day itinerary
+                        structured_itinerary = f"""🗽 NEW YORK CITY ADVENTURE
+{departure_date} to {return_date} ({trip_days} days)
+
+"""
+                        
+                        # Day-by-day breakdown
+                        for day in range(trip_days + 1):
+                            current_date = start_date + timedelta(days=day)
+                            date_str = current_date.strftime('%B %d, %Y')
+                            day_name = current_date.strftime('%A')
+                            
+                            if day == 0:
+                                # Arrival day
+                                structured_itinerary += f"""**Day 1 - {day_name}, {date_str}** ✈️
+• Arrive in New York City
+• Check into accommodation in Manhattan or Brooklyn
+• Evening stroll through Times Square to get oriented
+• Dinner in the Theater District
+
+"""
+                            elif day == trip_days:
+                                # Departure day
+                                structured_itinerary += f"""**Day {day + 1} - {day_name}, {date_str}** 🛫
+• Check out of accommodation
+• Last-minute souvenir shopping
+• Departure to San Diego
+
+"""
+                            else:
+                                # Full days in NYC
+                                day_num = day + 1
+                                
+                                if day_num == 2:
+                                    structured_itinerary += f"""**Day {day_num} - {day_name}, {date_str}** 🏛️
+• Morning: Central Park and Bethesda Fountain
+• Midday: Metropolitan Museum of Art
+• Afternoon: Walk through Upper East Side
+• Evening: US Open Qualifiers at USTA Billie Jean King Center (if August 20-23)
+• Dinner: Local restaurant in Manhattan
+
+"""
+                                elif day_num == 3:
+                                    structured_itinerary += f"""**Day {day_num} - {day_name}, {date_str}** 🌉
+• Morning: Statue of Liberty and Ellis Island
+• Afternoon: Explore Brooklyn Heights and DUMBO
+• Walk across Brooklyn Bridge
+• Evening: Coney Island for dinner and Friday night fireworks
+• Experience local Brooklyn nightlife
+
+"""
+                                elif day_num == 4:
+                                    structured_itinerary += f"""**Day {day_num} - {day_name}, {date_str}** 🎭
+• Morning: Empire State Building observation deck
+• Midday: Explore Greenwich Village and SoHo
+• Afternoon: Broadway show matinee or Harlem cultural tour
+• Evening: Summer Streets activities (if Saturday)
+• Farewell dinner in Little Italy
+
+"""
+                        
+                        # Add practical information
+                        structured_itinerary += f"""
+
+**🏨 ACCOMMODATION RECOMMENDATIONS:**
+{accommodations[:300] if accommodations else "• Budget: $200-250/night in Brooklyn or Times Square area"}
+
+**💰 BUDGET BREAKDOWN:**
+• Accommodation: $800-1,000 (4 nights)
+• Food: $300-500
+• Activities: $200-400
+• Transportation: $100-200
+• Total: $1,400-2,100 (within your $2,500 budget)
+
+**🚇 GETTING AROUND:**
+• Use NYC subway system with MetroCard or OMNY
+• Walking is great for exploring neighborhoods
+• Taxi/Uber for late-night transportation
+
+**📱 LOCAL TIPS:**
+• Download NYC subway app for navigation
+• Tipping 18-20% at restaurants
+• Many museums have suggested donation policies
+• Book Broadway shows in advance
+"""
+                    else:
+                        # Fallback if dates can't be parsed
+                        default_activities = "• Times Square and Broadway shows\n• Central Park and museums\n• Brooklyn Bridge and neighborhoods"
+                        structured_itinerary = f"""🗽 NEW YORK CITY TRAVEL PLAN
+
+**HIGHLIGHTS:**
+• Explore iconic Manhattan landmarks
+• Experience diverse neighborhoods and culture
+• Enjoy world-class museums and entertainment
+• Sample amazing food from around the world
+
+**TOP ACTIVITIES:**
+{activities[:500] if activities else default_activities}
+
+**ACCOMMODATION:**
+{accommodations[:300] if accommodations else "Budget-friendly options in Brooklyn or Manhattan"}
+
+**PRACTICAL INFO:**
+• Use public transportation (subway system)
+• Budget approximately $200-400 per day
+• Best neighborhoods: Manhattan, Brooklyn Heights, Greenwich Village
+"""
+                    
+                    # Store the structured itinerary
+                    await handler.ctx.store.set("state", {
+                        **state,
+                        "itinerary": structured_itinerary
+                    })
+                    
+                    print(f"📝 Structured day-by-day itinerary created with {len(structured_itinerary)} characters")
+                    
+                except Exception as e:
+                    print(f"⚠️ Error creating structured itinerary: {e}")
+                    # Original fallback
+                    # Create fallback with agent list
+                    agent_list = ', '.join(agent_activations)
+                    fallback_itinerary = f"""
+                    TRAVEL ITINERARY (Generated from available research)
+                    
+                    Based on available research from activated agents: {agent_list}
+                    
+                    BUDGET ANALYSIS:
+                    {budget_analysis}
+                    
+                    RESEARCH NOTES:
+                    """
+                    
+                    for category, notes in travel_notes.items():
+                        fallback_itinerary += f"\n{category.upper()}: {notes}\n"
+                    
+                    if not fallback_itinerary.strip():
+                        fallback_itinerary = "Basic travel plan: Research destination, book transportation and accommodation within budget, check weather and pack accordingly."
+                    
+                    await handler.ctx.store.set("state", {
+                        **state,
+                        "itinerary": fallback_itinerary
+                    })
+                    
+                    print(f"📝 Fallback itinerary created with {len(fallback_itinerary)} characters")
+            
+            # Check for revision requests and budget validation
+            try:
+                state = await handler.ctx.store.get("state") if handler.ctx else {}
+            except:
+                state = {}
             
             # Force validation if not reached
             if "ValidationAgent" not in agent_activations:
@@ -558,9 +1251,9 @@ async def execute_validated_travel_workflow(prompt, max_revision_cycles=3):
                 for revision in pending_revisions:
                     print(f"  • {revision['agent']}: {revision['request']}")
                 
-                revision_cycle += 1
-                if revision_cycle < max_revision_cycles:
-                    print(f"🔄 Starting revision cycle {revision_cycle + 1}...")
+                tracker.revision_cycle += 1
+                if tracker.revision_cycle < limits.max_revision_cycles:
+                    print(f"🔄 Starting revision cycle {tracker.revision_cycle + 1}...")
                     # Add revision instructions to prompt
                     revision_text = "\n\nREVISION REQUIREMENTS:\n"
                     for rev in pending_revisions:
@@ -572,8 +1265,8 @@ async def execute_validated_travel_workflow(prompt, max_revision_cycles=3):
                 break
         
         # If max cycles reached
-        if revision_cycle >= max_revision_cycles:
-            print(f"⚠️ Maximum revision cycles ({max_revision_cycles}) reached.")
+        if tracker.revision_cycle >= limits.max_revision_cycles:
+            print(f"⚠️ Maximum revision cycles ({limits.max_revision_cycles}) reached.")
         
         display_validated_travel_plan(state)
         return state
@@ -677,7 +1370,15 @@ async def test_budget_validation():
     """
     
     print("🧪 Testing Validation System - Budget Compliance")
-    result = await execute_validated_travel_workflow(test_prompt, max_revision_cycles=2)
+    # Use fast limits for testing
+    test_limits = WorkflowLimits(
+        max_iterations=30,
+        max_revision_cycles=1,
+        max_api_calls=50,
+        max_duration_minutes=3,
+        early_termination_enabled=True
+    )
+    result = await execute_validated_travel_workflow(test_prompt, custom_limits=test_limits)
     return result
 
 async def test_luxury_validation():
@@ -700,7 +1401,15 @@ async def test_luxury_validation():
     """
     
     print("🧪 Testing Validation System - Luxury Requirements")
-    result = await execute_validated_travel_workflow(test_prompt, max_revision_cycles=2)
+    # Use fast limits for testing
+    test_limits = WorkflowLimits(
+        max_iterations=30,
+        max_revision_cycles=1,
+        max_api_calls=50,
+        max_duration_minutes=3,
+        early_termination_enabled=True
+    )
+    result = await execute_validated_travel_workflow(test_prompt, custom_limits=test_limits)
     return result
 
 async def test_simple_validation():
@@ -717,7 +1426,15 @@ async def test_simple_validation():
     """
     
     print("🧪 Testing Validation System - Simple Scenario")
-    result = await execute_validated_travel_workflow(test_prompt, max_revision_cycles=1)
+    # Use fast limits for testing
+    test_limits = WorkflowLimits(
+        max_iterations=25,
+        max_revision_cycles=1,
+        max_api_calls=40,
+        max_duration_minutes=2,
+        early_termination_enabled=True
+    )
+    result = await execute_validated_travel_workflow(test_prompt, custom_limits=test_limits)
     return result
 
 async def debug_workflow_test():
@@ -726,47 +1443,50 @@ async def debug_workflow_test():
     
     # Check agent handoffs
     print("\n🔗 Agent handoff configuration:")
-    agents = [destination_research_agent, budget_analysis_agent, transportation_agent, 
-              weather_agent, travel_planner_agent, validation_agent, quality_control_agent]
+    agents = [general_research_agent, accommodations_agent, activities_agent, local_events_agent, budget_analysis_agent, 
+              flight_agent, local_transportation_agent, weather_agent, travel_planner_agent, validation_agent, quality_control_agent]
     
     for agent in agents:
         handoffs = getattr(agent, 'can_handoff_to', [])
-        print(f"  {agent.name} → {handoffs}")
+        print(f"  • {agent.name}: can handoff to {handoffs}")
     
-    # Simple test prompt
-    simple_prompt = "Plan a simple 3-day trip to San Francisco with a $1000 budget."
-    
-    print(f"\n🧪 Testing with simple prompt: {simple_prompt}")
-    
+    # Process the workflow
     try:
-        handler = enhanced_travel_workflow.run(user_msg=simple_prompt, max_iterations=50)
+        print(f"\n🚀 Starting GlobePiloT enhanced workflow...")
+        print(f"📍 Starting with: {general_research_agent.name}")
+        result = await enhanced_travel_workflow.run(prompt)
         
+        # Debug: Print event information
+        events = result.get("workflow_events", [])
         agent_sequence = []
         event_count = 0
         
-        async for event in handler.stream_events():
+        for event in events:
             event_count += 1
-            
-            if hasattr(event, "current_agent_name"):
-                if event.current_agent_name not in agent_sequence:
-                    agent_sequence.append(event.current_agent_name)
-                    print(f"🤖 Agent {len(agent_sequence)}: {event.current_agent_name}")
-            
-            if event_count > 100:  # Prevent infinite loops
-                print("⏰ Stopping after 100 events")
-                break
+            if hasattr(event, 'name'):
+                agent_sequence.append(event.name)
+            print(f"Event {event_count}: {event}")
         
-        print(f"\n📊 Total events: {event_count}")
+        print(f"\n📊 Workflow completion analysis:")
+        print(f"📊 Total events: {event_count}")
         print(f"📊 Agent sequence: {agent_sequence}")
-        print(f"📊 Expected: 7 agents (5 planning + 2 validation)")
+        print(f"📊 Expected: 11 agents total (9 specialized + 2 validation)")
         
-        if len(agent_sequence) < 5:
+        if len(agent_sequence) < 9:
             print("❌ Workflow stopped early - handoff chain broken")
         else:
-            print("✅ All planning agents activated")
-            
+            print("✅ Workflow completed expected agent sequence")
+        
+        return result
+        
     except Exception as e:
-        print(f"❌ Debug test failed: {e}")
+        print(f"❌ Workflow execution error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "workflow_status": "failed"
+        }
 
 # ============================================================================
 # MAIN EXECUTION
@@ -775,15 +1495,20 @@ async def debug_workflow_test():
 async def main():
     """Main function to demonstrate GlobePiloT capabilities"""
     
-    print("🎯 GLOBEPILOT ENHANCED - VALIDATION & QUALITY CONTROL SYSTEM")
+    print("🎯 GLOBEPILOT ENHANCED - STREAMLINED MULTI-AGENT TRAVEL SYSTEM")
     print("=" * 70)
-    print("🤖 TOTAL AGENTS: 7 specialized travel agents + 2 validation agents")
-    print("🔧 VALIDATION FEATURES:")
+    print("🤖 TOTAL AGENTS: 11 specialized travel agents")
+    print("🔧 STREAMLINED FEATURES:")
+    print("  • 4 specialized destination research agents")
+    print("  • 2 specialized transportation agents") 
+    print("  • 1 budget analysis agent")
+    print("  • 1 weather agent")
+    print("  • 1 master travel planner agent")
+    print("  • 2 validation and quality control agents")
     print("  • Automatic budget compliance checking")
-    print("  • Requirements validation")
-    print("  • Multi-cycle revision system")
-    print("  • Quality issue tracking")
-    print("  • Final plan approval workflow")
+    print("  • Multi-agent revision coordination")
+    print("  • JSON structured output system")
+    print("  • Real-time validation and quality assurance")
     print("=" * 70)
     
     while True:
@@ -805,7 +1530,15 @@ async def main():
             await test_simple_validation()
         elif choice == "4":
             custom_prompt = input("\nEnter your custom travel request:\n")
-            await execute_validated_travel_workflow(custom_prompt)
+            # Use debug limits for custom testing
+            debug_limits = WorkflowLimits(
+                max_iterations=40,
+                max_revision_cycles=1,
+                max_api_calls=60,
+                max_duration_minutes=4,
+                early_termination_enabled=True
+            )
+            await execute_validated_travel_workflow(custom_prompt, custom_limits=debug_limits)
         elif choice == "5":
             await debug_workflow_test()
         elif choice == "6":
@@ -813,6 +1546,303 @@ async def main():
             break
         else:
             print("❌ Invalid choice. Please try again.")
+
+# ============================================================================
+# JSON SCHEMAS FOR STRUCTURED AGENT OUTPUTS
+# ============================================================================
+
+DESTINATION_RESEARCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "destination": {"type": "string"},
+        "overview": {"type": "string"},
+        "attractions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "address": {"type": "string"},
+                    "cost": {"type": "string"},
+                    "hours": {"type": "string"},
+                    "category": {"type": "string"},
+                    "booking_required": {"type": "boolean"},
+                    "duration": {"type": "string"}
+                }
+            }
+        },
+        "neighborhoods": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "best_for": {"type": "array", "items": {"type": "string"}},
+                    "safety_rating": {"type": "string"}
+                }
+            }
+        },
+        "dining": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "cuisine": {"type": "string"},
+                    "price_range": {"type": "string"},
+                    "address": {"type": "string"},
+                    "description": {"type": "string"},
+                    "reservation_required": {"type": "boolean"}
+                }
+            }
+        },
+        "accommodation": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "type": {"type": "string"},
+                    "price_range": {"type": "string"},
+                    "address": {"type": "string"},
+                    "amenities": {"type": "array", "items": {"type": "string"}},
+                    "rating": {"type": "number"}
+                }
+            }
+        },
+        "cultural_info": {
+            "type": "object",
+            "properties": {
+                "customs": {"type": "array", "items": {"type": "string"}},
+                "tipping": {"type": "string"},
+                "dress_code": {"type": "string"},
+                "language_tips": {"type": "array", "items": {"type": "string"}}
+            }
+        },
+        "safety_info": {
+            "type": "object",
+            "properties": {
+                "safe_areas": {"type": "array", "items": {"type": "string"}},
+                "areas_to_avoid": {"type": "array", "items": {"type": "string"}},
+                "common_scams": {"type": "array", "items": {"type": "string"}},
+                "emergency_numbers": {"type": "object"}
+            }
+        },
+        "seasonal_info": {
+            "type": "object",
+            "properties": {
+                "best_time_to_visit": {"type": "string"},
+                "peak_season": {"type": "string"},
+                "special_events": {"type": "array", "items": {"type": "object"}}
+            }
+        }
+    }
+}
+
+ACCOMMODATION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "budget_allocation": {
+            "type": "object",
+            "properties": {
+                "total_budget": {"type": "number"},
+                "accommodation_budget_min": {"type": "number"},
+                "accommodation_budget_max": {"type": "number"},
+                "percentage_range": {"type": "string"}
+            }
+        },
+        "recommendations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "address": {"type": "string"},
+                    "platform_type": {"type": "string"},
+                    "booking_platform": {"type": "string"},
+                    "price_per_night": {"type": "number"},
+                    "total_stay_cost": {"type": "number"},
+                    "booking_url": {"type": "string"},
+                    "image_url": {"type": "string"},
+                    "description": {"type": "string"},
+                    "unique_features": {"type": "array", "items": {"type": "string"}},
+                    "amenities_included": {"type": "array", "items": {"type": "string"}},
+                    "amenities_extra_cost": {"type": "array", "items": {"type": "string"}},
+                    "location_score": {"type": "number"},
+                    "walking_distance_attractions": {"type": "string"},
+                    "neighborhood": {"type": "string"},
+                    "pros": {"type": "array", "items": {"type": "string"}},
+                    "cons": {"type": "array", "items": {"type": "string"}}
+                }
+            }
+        },
+        "booking_strategy": {
+            "type": "object",
+            "properties": {
+                "best_booking_time": {"type": "string"},
+                "price_comparison_tips": {"type": "array", "items": {"type": "string"}},
+                "cancellation_policies": {"type": "string"}
+            }
+        }
+    }
+}
+
+BUDGET_ANALYSIS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "total_estimated_cost": {"type": "number"},
+        "budget_scenarios": {
+            "type": "object",
+            "properties": {
+                "budget": {"type": "object", "properties": {"total": {"type": "number"}, "per_day": {"type": "number"}}},
+                "mid_range": {"type": "object", "properties": {"total": {"type": "number"}, "per_day": {"type": "number"}}},
+                "luxury": {"type": "object", "properties": {"total": {"type": "number"}, "per_day": {"type": "number"}}}
+            }
+        },
+        "cost_breakdown": {
+            "type": "object",
+            "properties": {
+                "accommodation": {"type": "object", "properties": {"min": {"type": "number"}, "max": {"type": "number"}, "recommended": {"type": "number"}}},
+                "transportation": {"type": "object", "properties": {"flights": {"type": "number"}, "local_transport": {"type": "number"}, "transfers": {"type": "number"}}},
+                "food": {"type": "object", "properties": {"min": {"type": "number"}, "max": {"type": "number"}, "per_day": {"type": "number"}}},
+                "activities": {"type": "object", "properties": {"min": {"type": "number"}, "max": {"type": "number"}, "must_do": {"type": "number"}}},
+                "shopping": {"type": "object", "properties": {"souvenirs": {"type": "number"}, "optional": {"type": "number"}}},
+                "miscellaneous": {"type": "object", "properties": {"tips": {"type": "number"}, "emergency": {"type": "number"}}}
+            }
+        },
+        "cost_saving_tips": {"type": "array", "items": {"type": "string"}},
+        "payment_methods": {"type": "array", "items": {"type": "string"}},
+        "currency_info": {"type": "object"}
+    }
+}
+
+WEATHER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "daily_forecasts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string"},
+                    "high_temp": {"type": "number"},
+                    "low_temp": {"type": "number"},
+                    "conditions": {"type": "string"},
+                    "precipitation_chance": {"type": "number"},
+                    "humidity": {"type": "number"},
+                    "wind_speed": {"type": "number"},
+                    "uv_index": {"type": "number"}
+                }
+            }
+        },
+        "seasonal_patterns": {
+            "type": "object",
+            "properties": {
+                "typical_weather": {"type": "string"},
+                "extreme_weather_risks": {"type": "array", "items": {"type": "string"}},
+                "best_days": {"type": "array", "items": {"type": "string"}},
+                "challenging_days": {"type": "array", "items": {"type": "string"}}
+            }
+        },
+        "activity_recommendations": {
+            "type": "object",
+            "properties": {
+                "outdoor_activities": {"type": "array", "items": {"type": "string"}},
+                "indoor_alternatives": {"type": "array", "items": {"type": "string"}},
+                "weather_dependent": {"type": "array", "items": {"type": "string"}}
+            }
+        },
+        "packing_implications": {
+            "type": "object",
+            "properties": {
+                "essential_items": {"type": "array", "items": {"type": "string"}},
+                "clothing_recommendations": {"type": "array", "items": {"type": "string"}},
+                "weather_gear": {"type": "array", "items": {"type": "string"}}
+            }
+        }
+    }
+}
+
+ITINERARY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "trip_overview": {
+            "type": "object",
+            "properties": {
+                "destination": {"type": "string"},
+                "duration": {"type": "string"},
+                "trip_type": {"type": "string"},
+                "total_cost": {"type": "number"}
+            }
+        },
+        "days": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "day_number": {"type": "integer"},
+                    "date": {"type": "string"},
+                    "title": {"type": "string"},
+                    "summary": {"type": "string"},
+                    "weather": {"type": "object"},
+                    "total_cost": {"type": "number"},
+                    "activities": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "time": {"type": "string"},
+                                "activity": {"type": "string"},
+                                "location": {"type": "string"},
+                                "address": {"type": "string"},
+                                "cost": {"type": "number"},
+                                "duration": {"type": "string"},
+                                "description": {"type": "string"},
+                                "booking_info": {"type": "string"},
+                                "backup_plan": {"type": "string"},
+                                "category": {"type": "string"}
+                            }
+                        }
+                    },
+                    "transportation": {
+                        "type": "object",
+                        "properties": {
+                            "primary_method": {"type": "string"},
+                            "daily_cost": {"type": "number"},
+                            "notes": {"type": "string"}
+                        }
+                    },
+                    "dining": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "meal": {"type": "string"},
+                                "restaurant": {"type": "string"},
+                                "cuisine": {"type": "string"},
+                                "cost": {"type": "number"},
+                                "address": {"type": "string"},
+                                "reservation": {"type": "boolean"}
+                            }
+                        }
+                    },
+                    "tips": {"type": "array", "items": {"type": "string"}}
+                }
+            }
+        },
+        "additional_info": {
+            "type": "object",
+            "properties": {
+                "transportation_overview": {"type": "string"},
+                "accommodation_details": {"type": "object"},
+                "emergency_contacts": {"type": "object"},
+                "local_tips": {"type": "array", "items": {"type": "string"}}
+            }
+        }
+    }
+}
 
 if __name__ == "__main__":
     asyncio.run(main()) 

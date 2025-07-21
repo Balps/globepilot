@@ -42,29 +42,37 @@
                     <div class="col-md-6">
                         <h6 class="text-primary mb-3"><i class="fas fa-robot me-2"></i>Planning Agents</h6>
                         <div class="agent-status" id="agents-planning">
-                            <div class="d-flex align-items-center mb-2" id="agent-destination">
-                                <i class="fas fa-circle text-muted me-2" id="icon-destination"></i>
-                                <span>Destination Research Agent</span>
+                            <div class="d-flex align-items-center mb-2" id="agent-general">
+                                <i class="fas fa-circle text-muted me-2" id="icon-general"></i>
+                                <span>General Research Agent</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-2" id="agent-accommodations">
+                                <i class="fas fa-circle text-muted me-2" id="icon-accommodations"></i>
+                                <span>Accommodations Agent</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-2" id="agent-activities">
+                                <i class="fas fa-circle text-muted me-2" id="icon-activities"></i>
+                                <span>Activities Agent</span>
+                            </div>
+                            <div class="d-flex align-items-center mb-2" id="agent-events">
+                                <i class="fas fa-circle text-muted me-2" id="icon-events"></i>
+                                <span>Local Events Agent</span>
                             </div>
                             <div class="d-flex align-items-center mb-2" id="agent-budget">
                                 <i class="fas fa-circle text-muted me-2" id="icon-budget"></i>
                                 <span>Budget Analysis Agent</span>
                             </div>
+                            <div class="d-flex align-items-center mb-2" id="agent-flight">
+                                <i class="fas fa-circle text-muted me-2" id="icon-flight"></i>
+                                <span>Flight Agent</span>
+                            </div>
                             <div class="d-flex align-items-center mb-2" id="agent-transport">
                                 <i class="fas fa-circle text-muted me-2" id="icon-transport"></i>
-                                <span>Transportation Agent</span>
+                                <span>Local Transportation Agent</span>
                             </div>
                             <div class="d-flex align-items-center mb-2" id="agent-weather">
                                 <i class="fas fa-circle text-muted me-2" id="icon-weather"></i>
                                 <span>Weather Agent</span>
-                            </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-document">
-                                <i class="fas fa-circle text-muted me-2" id="icon-document"></i>
-                                <span>Document Agent</span>
-                            </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-packing">
-                                <i class="fas fa-circle text-muted me-2" id="icon-packing"></i>
-                                <span>Packing Agent</span>
                             </div>
                             <div class="d-flex align-items-center mb-2" id="agent-planner">
                                 <i class="fas fa-circle text-muted me-2" id="icon-planner"></i>
@@ -158,12 +166,14 @@ let currentStep = 0;
 
 const steps = [
     'Initializing AI agents...',
-    'Destination Research Agent working...',
+    'General Research Agent working...',
+    'Accommodations Agent working...',
+    'Activities Agent working...',
+    'Local Events Agent working...',
     'Budget Analysis Agent working...',
-    'Transportation Agent working...',
+    'Flight Agent working...',
+    'Local Transportation Agent working...',
     'Weather Agent working...',
-    'Document Agent researching requirements...',
-    'Packing Agent creating suggestions...',
     'Travel Planner Agent working...',
     'Validation Agent checking...',
     'Quality Control Agent reviewing...',
@@ -171,12 +181,14 @@ const steps = [
 ];
 
 const agentMapping = {
-    'DestinationResearchAgent': 'destination',
-    'BudgetAnalysisAgent': 'budget', 
-    'TransportationAgent': 'transport',
+    'GeneralResearchAgent': 'general',
+    'AccommodationsAgent': 'accommodations', 
+    'ActivitiesAgent': 'activities',
+    'LocalEventsAgent': 'events',
+    'BudgetAnalysisAgent': 'budget',
+    'FlightAgent': 'flight',
+    'LocalTransportationAgent': 'transport',
     'WeatherAgent': 'weather',
-    'DocumentAgent': 'document',
-    'PackingAgent': 'packing',
     'TravelPlannerAgent': 'planner',
     'ValidationAgent': 'validation',
     'QualityControlAgent': 'quality'
@@ -241,50 +253,68 @@ function checkStatus() {
                 // Simulate agent activation based on progress
                 if (progress > 10 && currentStep < 1) {
                     currentStep = 1;
-                    activateAgent('DestinationResearchAgent');
-                    addLogEntry('Destination Research Agent started');
+                    activateAgent('GeneralResearchAgent');
+                    addLogEntry('General Research Agent started');
                 }
                 if (progress > 25 && currentStep < 2) {
                     currentStep = 2;
-                    completeAgent('DestinationResearchAgent');
-                    activateAgent('BudgetAnalysisAgent');
-                    addLogEntry('Budget Analysis Agent started');
+                    completeAgent('GeneralResearchAgent');
+                    activateAgent('AccommodationsAgent');
+                    addLogEntry('Accommodations Agent started');
                 }
                 if (progress > 40 && currentStep < 3) {
                     currentStep = 3;
-                    completeAgent('BudgetAnalysisAgent');
-                    activateAgent('TransportationAgent');
-                    addLogEntry('Transportation Agent started');
+                    completeAgent('AccommodationsAgent');
+                    activateAgent('ActivitiesAgent');
+                    addLogEntry('Activities Agent started');
                 }
                 if (progress > 55 && currentStep < 4) {
                     currentStep = 4;
-                    completeAgent('TransportationAgent');
-                    activateAgent('WeatherAgent');
-                    addLogEntry('Weather Agent started');
+                    completeAgent('ActivitiesAgent');
+                    activateAgent('LocalEventsAgent');
+                    addLogEntry('Local Events Agent started');
                 }
                 if (progress > 65 && currentStep < 5) {
                     currentStep = 5;
-                    completeAgent('WeatherAgent');
-                    activateAgent('DocumentAgent');
-                    addLogEntry('Document Agent researching requirements');
+                    completeAgent('LocalEventsAgent');
+                    activateAgent('BudgetAnalysisAgent');
+                    addLogEntry('Budget Analysis Agent started');
                 }
                 if (progress > 70 && currentStep < 6) {
                     currentStep = 6;
-                    completeAgent('DocumentAgent');
-                    activateAgent('PackingAgent');
-                    addLogEntry('Packing Agent creating suggestions');
+                    completeAgent('BudgetAnalysisAgent');
+                    activateAgent('FlightAgent');
+                    addLogEntry('Flight Agent started');
                 }
                 if (progress > 80 && currentStep < 7) {
                     currentStep = 7;
-                    completeAgent('PackingAgent');
-                    activateAgent('TravelPlannerAgent');
-                    addLogEntry('Travel Planner Agent started');
+                    completeAgent('FlightAgent');
+                    activateAgent('LocalTransportationAgent');
+                    addLogEntry('Local Transportation Agent started');
                 }
                 if (progress > 90 && currentStep < 8) {
                     currentStep = 8;
+                    completeAgent('LocalTransportationAgent');
+                    activateAgent('WeatherAgent');
+                    addLogEntry('Weather Agent started');
+                }
+                if (progress > 95 && currentStep < 9) {
+                    currentStep = 9;
+                    completeAgent('WeatherAgent');
+                    activateAgent('TravelPlannerAgent');
+                    addLogEntry('Travel Planner Agent started');
+                }
+                if (progress > 98 && currentStep < 10) {
+                    currentStep = 10;
                     completeAgent('TravelPlannerAgent');
                     activateAgent('ValidationAgent');
                     addLogEntry('Validation Agent checking budget compliance');
+                }
+                if (progress > 99 && currentStep < 11) {
+                    currentStep = 11;
+                    completeAgent('ValidationAgent');
+                    activateAgent('QualityControlAgent');
+                    addLogEntry('Quality Control Agent reviewing plan');
                 }
                 
             } else {

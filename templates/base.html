@@ -187,8 +187,69 @@
                 padding: 1rem;
             }
         }
+        
+        /* Clean Itinerary Styling */
+        .itinerary-container {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        .itinerary-container h1, .itinerary-container h2, .itinerary-container h3 {
+            color: #333;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .itinerary-container h1 {
+            color: #667eea;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+        }
+
+        .itinerary-container ul, .itinerary-container ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .itinerary-container li {
+            margin-bottom: 0.5rem;
+            padding-left: 0.5rem;
+        }
+
+        .itinerary-container strong {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .itinerary-container ul li::marker {
+            color: #667eea;
+        }
+
+        .research-section {
+            border-left: 3px solid #e9ecef;
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .research-content {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-top: 0.5rem;
+        }
+
+        .research-section h6 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
     </style>
-    
     {% block extra_css %}{% endblock %}
 </head>
 <body>
