@@ -76,15 +76,21 @@ class PerformanceMiddleware:
             duration = time.time() - g.start_time
             response.headers['X-Response-Time'] = f"{duration:.3f}s"
         
-        # Cache GET responses that are successful
+        # Cache GET responses that are successful (but not compressed ones)
         if (request.method == 'GET' and 
             response.status_code == 200 and
             'text/html' in response.content_type and
-            not request.args.get('no_cache')):
+            not request.args.get('no_cache') and
+            not response.headers.get('Content-Encoding')):  # Don't cache compressed responses
             
             cache_key = f"{request.path}:{request.query_string.decode()}"
-            # Cache for 5 minutes for HTML responses
-            cache_manager.set('api_responses', cache_key, response.get_data(as_text=True), ttl=300)
+            try:
+                # Cache for 5 minutes for HTML responses
+                response_data = response.get_data(as_text=True)
+                cache_manager.set('api_responses', cache_key, response_data, ttl=300)
+            except UnicodeDecodeError:
+                # Skip caching if we can't decode the response as text
+                logger.debug(f"Skipping cache for {cache_key} - binary response")
         
         return response
     
@@ -288,11 +294,11 @@ def configure_static_file_serving(app):
 def initialize_performance_optimizations(app):
     """Initialize all performance optimizations"""
     
-    # Add middleware
-    PerformanceMiddleware(app)
-    
-    # Setup gzip compression
+    # Setup gzip compression first (runs last in after_request chain)
     gzip_middleware(app)
+    
+    # Add performance middleware second (runs before compression)
+    PerformanceMiddleware(app)
     
     # Configure static file serving
     configure_static_file_serving(app)
