@@ -62,7 +62,9 @@ class PerformanceMiddleware:
         
         # Check for cached responses
         if request.method == 'GET' and not request.args.get('no_cache'):
-            cache_key = f"{request.path}:{request.query_string.decode()}"
+            # Create safe cache key using hash
+            cache_data = {'path': request.path, 'query': request.query_string.decode()}
+            cache_key = cache_manager.generate_cache_key(cache_data)
             cached_response = cache_manager.get('api_responses', cache_key)
             
             if cached_response:
@@ -83,7 +85,9 @@ class PerformanceMiddleware:
             not request.args.get('no_cache') and
             not response.headers.get('Content-Encoding')):  # Don't cache compressed responses
             
-            cache_key = f"{request.path}:{request.query_string.decode()}"
+            # Create safe cache key using hash
+            cache_data = {'path': request.path, 'query': request.query_string.decode()}
+            cache_key = cache_manager.generate_cache_key(cache_data)
             try:
                 # Cache for 5 minutes for HTML responses
                 response_data = response.get_data(as_text=True)
@@ -111,22 +115,35 @@ def gzip_middleware(app):
         if not response.content_type.startswith(('text/', 'application/json', 'application/javascript')):
             return response
         
-        # Skip if response is too small
-        if len(response.get_data()) < 500:
-            return response
-        
         # Skip if already compressed
         if response.headers.get('Content-Encoding'):
             return response
         
-        # Compress the response
-        gzip_buffer = io.BytesIO()
-        with gzip.GzipFile(fileobj=gzip_buffer, mode='wb') as gzip_file:
-            gzip_file.write(response.get_data())
-        
-        response.set_data(gzip_buffer.getvalue())
-        response.headers['Content-Encoding'] = 'gzip'
-        response.headers['Content-Length'] = len(response.get_data())
+        try:
+            # Try to get response data - will fail for direct passthrough responses
+            response_data = response.get_data()
+            
+            # Skip if response is too small
+            if len(response_data) < 500:
+                return response
+            
+            # Compress the response
+            gzip_buffer = io.BytesIO()
+            with gzip.GzipFile(fileobj=gzip_buffer, mode='wb') as gzip_file:
+                gzip_file.write(response_data)
+            
+            response.set_data(gzip_buffer.getvalue())
+            response.headers['Content-Encoding'] = 'gzip'
+            response.headers['Content-Length'] = len(response.get_data())
+            
+        except RuntimeError as e:
+            # Handle direct passthrough responses (static files)
+            if "direct passthrough mode" in str(e):
+                logger.debug(f"Skipping compression for direct passthrough response: {request.path}")
+                return response
+            else:
+                # Re-raise other RuntimeErrors
+                raise
         
         return response
 
