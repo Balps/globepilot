@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Travel Itinerary with Maps</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .widget-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header .dates {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .day-tabs {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            overflow-x: auto;
+        }
+
+        .day-tab {
+            flex: 1;
+            padding: 16px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #64748b;
+            min-width: 120px;
+        }
+
+        .day-tab.active {
+            background: #4f46e5;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .day-tab:hover:not(.active) {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 700px;
+        }
+
+        .itinerary-panel {
+            padding: 30px;
+            overflow-y: auto;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .map-panel {
+            position: relative;
+            background: #f1f5f9;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .map-btn {
+            background: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .map-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .map-btn.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .day-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .day-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .day-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .day-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .activity-item {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 20px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .activity-item:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-item.highlighted {
+            background: #fef3c7;
+            transform: translateX(8px);
+            box-shadow: 0 8px 25px rgba(251, 191, 36, 0.3);
+        }
+
+        .activity-item.meal {
+            border-left-color: #f59e0b;
+        }
+
+        .activity-item.attraction {
+            border-left-color: #10b981;
+        }
+
+        .activity-item.transport {
+            border-left-color: #6366f1;
+        }
+
+        .activity-item.shopping {
+            border-left-color: #ec4899;
+        }
+
+        .activity-item.entertainment {
+            border-left-color: #8b5cf6;
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .activity-type {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.7;
+        }
+
+        .activity-order {
+            background: #94a3b8;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: auto;
+        }
+
+        .activity-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .activity-address {
+            font-size: 0.9rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .activity-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .distance-info {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .location-icon {
+            width: 14px;
+            height: 14px;
+            opacity: 0.6;
+        }
+
+        .info-panel {
+            grid-column: 1 / -1;
+            background: #f1f5f9;
+            padding: 25px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-icon {
+            width: 24px;
+            height: 24px;
+            background: #4f46e5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .route-summary {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .route-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            text-align: center;
+        }
+
+        .route-stat {
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .route-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .route-stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .map-panel {
+                height: 400px;
+                order: -1;
+            }
+
+            .itinerary-panel {
+                border-right: none;
+                border-top: 1px solid #e2e8f0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .widget-container {
+                margin: 10px;
+                border-radius: 16px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .itinerary-panel {
+                padding: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Custom map markers */
+        .custom-marker {
+            background: #4f46e5;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .route-line {
+            stroke: #4f46e5;
+            stroke-width: 3;
+            stroke-opacity: 0.8;
+            fill: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="widget-container">
+        <div class="header">
+            <h1>🗽 New York City Adventure</h1>
+            <div class="dates">August 20-24, 2025 • 5 Days</div>
+        </div>
+
+        <div class="day-tabs">
+            <button class="day-tab active" data-day="1">Day 1</button>
+            <button class="day-tab" data-day="2">Day 2</button>
+            <button class="day-tab" data-day="3">Day 3</button>
+            <button class="day-tab" data-day="4">Day 4</button>
+            <button class="day-tab" data-day="5">Day 5</button>
+        </div>
+
+        <div class="main-content">
+            <div class="itinerary-panel">
+                <div class="day-content active" id="day1">
+                    <div class="day-title">
+                        <div class="day-icon">1</div>
+                        Arrival & Chelsea Exploration
+                    </div>
+
+                    <div class="route-summary">
+                        <div class="route-stats">
+                            <div class="route-stat">
+                                <div class="route-stat-value">3</div>
+                                <div class="route-stat-label">Stops</div>
+                            </div>
+                            <div class="route-stat">
+                                <div class="route-stat-value">2.1 mi</div>
+                                <div class="route-stat-label">Total Distance</div>
+                            </div>
+                            <div class="route-stat">
+                                <div class="route-stat-value">35 min</div>
+                                <div class="route-stat-label">Walking Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="activity-list">
+                        <div class="activity-item transport" data-location="jfk" data-order="1">
+                            <div class="activity-header">
+                                <div class="activity-type">Transport</div>
+                                <div class="activity-order">1</div>
+                            </div>
+                            <div class="activity-name">Arrival at JFK Airport</div>
+                            <div class="activity-address">
+                                <svg class="location-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M10 2C6.134 2 3 5.134 3 9c0 4.5 7 11 7 11s7-6.5 7-11c0-3.866-3.134-7-7-7zm0 9.5c-1.381 0-2.5-1.119-2.5-2.5s1.119-2.5 2.5-2.5 2.5 1.119 2.5 2.5-1.119 2.5-2.5 2.5z" />
+                                </svg>
+                                Transfer to The High Line Hotel, 180 Tenth Ave
+                            </div>
+                            <div class="activity-details">
+                                <div class="distance-info">🚕 45 min from JFK</div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item attraction" data-location="highline" data-order="2">
+                            <div class="activity-header">
+                                <div class="activity-type">Sightseeing</div>
+                                <div class="activity-order">2</div>
+                            </div>
+                            <div class="activity-name">Stroll The High Line Park</div>
+                            <div class="activity-address">
+                                <svg class="location-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M10 2C6.134 2 3 5.134 3 9c0 4.5 7 11 7 11s7-6.5 7-11c0-3.866-3.134-7-7-7zm0 9.5c-1.381 0-2.5-1.119-2.5-2.5s1.119-2.5 2.5-2.5 2.5 1.119 2.5 2.5-1.119 2.5-2.5 2.5z" />
+                                </svg>
+                                Gansevoort St to W 34th St
+                            </div>
+                            <div class="activity-details">
+                                <div class="distance-info">🚶‍♂️ 2 min walk from hotel</div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item meal" data-location="cookshop" data-order="3">
+                            <div class="activity-header">
+                                <div class="activity-type">Dinner</div>
+                                <div class="activity-order">3</div>
+                            </div>
+                            <div class="activity-name">Cookshop</div>
+                            <div class="activity-address">
+                                <svg class="location-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M10 2C6.134 2 3 5.134 3 9c0 4.5 7 11 7 11s7-6.5 7-11c0-3.866-3.134-7-7-7zm0 9.5c-1.381 0-2.5-1.119-2.5-2.5s1.119-2.5 2.5-2.5 2.5 1.119 2.5 2.5-1.119 2.5-2.5 2.5z" />
+                                </svg>
+                                156 10th Ave, Chelsea
+                            </div>
+                            <div class="activity-details">
+                                <div class="distance-info">🚶‍♂️ 8 min walk</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional days would follow the same pattern -->
+                <div class="day-content" id="day2">
+                    <div class="day-title">
+                        <div class="day-icon">2</div>
+                        Iconic Manhattan
+                    </div>
+
+                    <div class="route-summary">
+                        <div class="route-stats">
+                            <div class="route-stat">
+                                <div class="route-stat-value">7</div>
+                                <div class="route-stat-label">Stops</div>
+                            </div>
+                            <div class="route-stat">
+                                <div class="route-stat-value">4.8 mi</div>
+                                <div class="route-stat-label">Total Distance</div>
+                            </div>
+                            <div class="route-stat">
+                                <div class="route-stat-value">1h 15m</div>
+                                <div class="route-stat-label">Walking Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="activity-list">
+                        <div class="activity-item meal" data-location="banter" data-order="1">
+                            <div class="activity-header">
+                                <div class="activity-type">Breakfast</div>
+                                <div class="activity-order">1</div>
+                            </div>
+                            <div class="activity-name">Banter</div>
+                            <div class="activity-address">643 Hudson St, West Village</div>
+                            <div class="activity-details">
+                                <div class="distance-info">🚶‍♂️ 12 min from hotel</div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item attraction" data-location="empire" data-order="2">
+                            <div class="activity-header">
+                                <div class="activity-type">Attraction</div>
+                                <div class="activity-order">2</div>
+                            </div>
+                            <div class="activity-name">Empire State Building</div>
+                            <div class="activity-address">20 W 34th St, Midtown</div>
+                            <div class="activity-details">
+                                <div class="distance-info">🚇 15 min subway ride</div>
+                            </div>
+                        </div>
+
+                        <!-- More activities... -->
+                    </div>
+                </div>
+
+                <!-- Days 3-5 would follow similar patterns -->
+            </div>
+
+            <div class="map-panel">
+                <div class="map-controls">
+                    <button class="map-btn active" id="showRoute">Show Route</button>
+                    <button class="map-btn" id="showAll">Show All Days</button>
+                    <button class="map-btn" id="centerMap">Center Map</button>
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-icon">
+                        <svg width="16" height="16" fill="white" viewBox="0 0 20 20">
+                            <path d="M10 2L3 7v11h4v-6h6v6h4V7l-7-5z" />
+                        </svg>
+                    </div>
+                    <div class="info-text">
+                        <div class="info-label">Accommodation</div>
+                        <div class="info-value">The High Line Hotel, Chelsea</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon">
+                        <svg width="16" height="16" fill="white" viewBox="0 0 20 20">
+                            <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" />
+                        </svg>
+                    </div>
+                    <div class="info-text">
+                        <div class="info-label">Transport</div>
+                        <div class="info-value">7-Day MetroCard + Walking</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon">
+                        <svg width="16" height="16" fill="white" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="info-text">
+                        <div class="info-label">Total Walking</div>
+                        <div class="info-value">~15 miles over 5 days</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        // Location coordinates for NYC attractions
+        const locations = {
+            day1: {
+                jfk: [40.6413, -73.7781],
+                hotel: [40.7441, -74.0063],
+                highline: [40.7480, -74.0048],
+                cookshop: [40.7439, -74.0059]
+            },
+            day2: {
+                hotel: [40.7441, -74.0063],
+                banter: [40.7341, -74.0063],
+                empire: [40.7484, -73.9857],
+                joespizza: [40.7580, -73.9855],
+                centralpark: [40.7794, -73.9632],
+                met: [40.7794, -73.9632],
+                mermaid: [40.7441, -74.0063],
+                gershwin: [40.7614, -73.9776]
+            }
+            // Add more days as needed
+        };
+
+        // Initialize map
+        let map = L.map('map').setView([40.7505, -73.9934], 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let currentMarkers = [];
+        let currentRoutes = [];
+        let currentDay = 1;
+
+        // Tab switching functionality
+        const tabs = document.querySelectorAll('.day-tab');
+        const contents = document.querySelectorAll('.day-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const dayId = tab.getAttribute('data-day');
+                currentDay = parseInt(dayId);
+
+                // Update tabs and content
+                tabs.forEach(t => t.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(`day${dayId}`).classList.add('active');
+
+                // Update map
+                updateMap(currentDay);
+            });
+        });
+
+        // Activity item interaction
+        const activityItems = document.querySelectorAll('.activity-item');
+        activityItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // Remove previous highlights
+                activityItems.forEach(i => i.classList.remove('highlighted'));
+
+                // Highlight clicked item
+                item.classList.add('highlighted');
+
+                // Focus map on location
+                const locationKey = item.getAttribute('data-location');
+                if (locationKey && locations[`day${currentDay}`] && locations[`day${currentDay}`][locationKey]) {
+                    const coords = locations[`day${currentDay}`][locationKey];
+                    map.setView(coords, 16);
+                }
+            });
+        });
+
+        function clearMapElements() {
+            currentMarkers.forEach(marker => map.removeLayer(marker));
+            currentRoutes.forEach(route => map.removeLayer(route));
+            currentMarkers = [];
+            currentRoutes = [];
+        }
+
+        function updateMap(day) {
+            clearMapElements();
+
+            const dayLocations = locations[`day${day}`];
+            if (!dayLocations) return;
+
+            const coords = Object.values(dayLocations);
+            const keys = Object.keys(dayLocations);
+
+            // Add markers
+            coords.forEach((coord, index) => {
+                const marker = L.circleMarker(coord, {
+                    radius: 12,
+                    fillColor: '#4f46e5',
+                    color: 'white',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).addTo(map);
+
+                // Add number to marker
+                marker.bindTooltip(`${index + 1}`, {
+                    permanent: true,
+                    className: 'marker-label',
+                    direction: 'center'
+                });
+
+                currentMarkers.push(marker);
+            });
+
+            // Add route lines
+            if (document.getElementById('showRoute').classList.contains('active')) {
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const route = L.polyline([coords[i], coords[i + 1]], {
+                        color: '#4f46e5',
+                        weight: 3,
+                        opacity: 0.8
+                    }).addTo(map);
+
+                    currentRoutes.push(route);
+                }
+            }
+
+            // Fit map to show all locations
+            if (coords.length > 0) {
+                const group = new L.featureGroup(currentMarkers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        // Map controls
+        document.getElementById('showRoute').addEventListener('click', function () {
+            this.classList.toggle('active');
+            updateMap(currentDay);
+        });
+
+        document.getElementById('showAll').addEventListener('click', function () {
+            // Show all days' locations on map
+            clearMapElements();
+
+            const allCoords = [];
+            Object.values(locations).forEach(dayLocs => {
+                Object.values(dayLocs).forEach(coord => {
+                    allCoords.push(coord);
+                });
+            });
+
+            allCoords.forEach((coord, index) => {
+                const marker = L.circleMarker(coord, {
+                    radius: 8,
+                    fillColor: '#64748b',
+                    color: 'white',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+
+                currentMarkers.push(marker);
+            });
+
+            if (allCoords.length > 0) {
+                const group = new L.featureGroup(currentMarkers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        });
+
+        document.getElementById('centerMap').addEventListener('click', function () {
+            map.setView([40.7505, -73.9934], 12);
+        });
+
+        // Initialize with day 1
+        updateMap(1);
+
+        // Add CSS for marker labels
+        const style = document.createElement('style');
+        style.textContent = `
+            .marker-label {
+                background: none !important;
+                border: none !important;
+                box-shadow: none !important;
+                color: white !important;
+                font-weight: bold !important;
+                font-size: 12px !important;
+                text-align: center !important;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+
+</html>

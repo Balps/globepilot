@@ -51,9 +51,9 @@
                 </div>
                 
                 <!-- AI Agents Status -->
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="text-primary mb-3"><i class="fas fa-robot me-2"></i>Planning Agents</h6>
+                <div class="row justify-content-center">
+                    <div class="col-md-5 mb-4">
+                        <h6 class="text-primary mb-3 text-center"><i class="fas fa-robot me-2"></i>Planning Agents</h6>
                         <div class="agent-status-list" id="agents-planning">
                             <div class="agent-item" id="agent-general" data-agent="GeneralResearchAgent">
                                 <div class="d-flex align-items-center">
@@ -164,22 +164,37 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <h6 class="text-primary mb-3"><i class="fas fa-shield-alt me-2"></i>Validation Agents</h6>
-                        <div class="agent-status" id="agents-validation">
-                            <div class="d-flex align-items-center mb-2" id="agent-validation">
-                                <i class="fas fa-circle text-muted me-2" id="icon-validation"></i>
-                                <span>Validation Agent</span>
+                    <div class="col-md-5 mb-4">
+                        <h6 class="text-primary mb-3 text-center"><i class="fas fa-shield-alt me-2"></i>Validation Agents</h6>
+                        <div class="agent-status-list" id="agents-validation">
+                            <div class="agent-item" id="agent-validation" data-agent="ValidationAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-double agent-icon me-2"></i>
+                                    <span class="agent-name">Validation Agent</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Validating plan requirements</div>
                             </div>
-                            <div class="d-flex align-items-center mb-2" id="agent-quality">
-                                <i class="fas fa-circle text-muted me-2" id="icon-quality"></i>
-                                <span>Quality Control Agent</span>
+                            
+                            <div class="agent-item" id="agent-quality" data-agent="QualityControlAgent">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-shield-alt agent-icon me-2"></i>
+                                    <span class="agent-name">Quality Control Agent</span>
+                                    <div class="agent-status-icons ms-auto">
+                                        <i class="fas fa-spinner fa-spin status-icon active-icon d-none text-primary"></i>
+                                        <i class="fas fa-check-circle text-success status-icon complete-icon d-none"></i>
+                                    </div>
+                                </div>
+                                <div class="agent-description text-muted small">Ensuring plan quality</div>
                             </div>
                         </div>
                         
-                        <div class="mt-4">
+                        <div class="mt-4 text-center">
                             <h6 class="text-success mb-3"><i class="fas fa-check-circle me-2"></i>Validation Features</h6>
-                            <ul class="list-unstyled text-sm">
+                            <ul class="list-unstyled text-sm" style="max-width: 300px; margin: 0 auto; text-align: left;">
                                 <li><i class="fas fa-check text-success me-2"></i>Budget compliance checking</li>
                                 <li><i class="fas fa-check text-success me-2"></i>Requirements validation</li>
                                 <li><i class="fas fa-check text-success me-2"></i>Quality control & revisions</li>
@@ -269,7 +284,7 @@ const agentMapping = {
     'AccommodationsAgent': 'accommodations', 
     'ActivitiesAgent': 'activities',
     'LocalEventsAgent': 'events',
-    'BudgetAnalysisAgent': 'budget',
+    'BudgetAnalysisAgent': 'budget', 
     'FlightAgent': 'flight',
     'LocalTransportationAgent': 'transport',
     'WeatherAgent': 'weather',
@@ -530,6 +545,16 @@ document.head.appendChild(style);
 }
 
 /* Enhanced Agent Status Styles */
+.agent-status-list {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.agent-status {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
 .agent-item {
     padding: 12px 15px;
     margin: 8px 0;
@@ -632,6 +657,216 @@ document.head.appendChild(style);
     
     .progress-container {
         padding: 15px;
+    }
+}
+
+/* ========================================
+   ADDITIONAL MOBILE OPTIMIZATIONS
+======================================== */
+
+/* Mobile-specific processing page optimizations */
+@media (max-width: 768px) {
+    /* Progress Section Mobile */
+    .progress-container .progress {
+        height: 25px;
+        margin-bottom: 1rem;
+    }
+    
+    #progress-text {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    /* Agent Items Mobile Enhancement */
+    .agent-item {
+        padding: 10px 12px;
+        margin: 6px 0;
+        border-radius: 6px;
+        min-height: 44px; /* Touch target size */
+        display: flex;
+        align-items: center;
+    }
+    
+    .agent-item.active {
+        transform: none;
+        box-shadow: 0 3px 12px rgba(33, 150, 243, 0.25);
+        border-left-width: 3px;
+    }
+    
+    .agent-item.completed {
+        box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+        border-left-width: 3px;
+    }
+    
+    .agent-icon {
+        font-size: 0.95rem;
+        width: 18px;
+        margin-right: 8px;
+    }
+    
+    .agent-name {
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+    }
+    
+    .agent-description {
+        font-size: 0.75rem;
+        line-height: 1.3;
+        margin-top: 2px;
+        opacity: 0.8;
+    }
+    
+    /* Status Text Mobile */
+    #statusText {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    #statusDetail {
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Time Remaining Mobile */
+    #time-remaining {
+        font-size: 0.8rem;
+    }
+    
+    /* Agent Section Headers Mobile */
+    .card-header h6 {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+    
+    /* Validation Features Mobile */
+    .validation-features {
+        margin-top: 0.75rem;
+    }
+    
+    .validation-features h6 {
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+        color: #495057;
+    }
+    
+    .validation-features ul {
+        font-size: 0.8rem;
+        padding-left: 1.2rem;
+        margin-bottom: 0;
+    }
+    
+    .validation-features li {
+        margin-bottom: 0.25rem;
+        line-height: 1.4;
+    }
+}
+
+/* Small Mobile Specific */
+@media (max-width: 576px) {
+    .progress-container {
+        padding: 10px;
+    }
+    
+    .progress-container .progress {
+        height: 20px;
+    }
+    
+    #progress-text {
+        font-size: 0.75rem;
+    }
+    
+    .agent-item {
+        padding: 8px 10px;
+        margin: 4px 0;
+        min-height: 40px;
+    }
+    
+    .agent-name {
+        font-size: 0.85rem;
+    }
+    
+    .agent-description {
+        font-size: 0.7rem;
+    }
+    
+    .agent-icon {
+        font-size: 0.9rem;
+        width: 16px;
+    }
+    
+    #statusText {
+        font-size: 0.95rem;
+    }
+    
+    #statusDetail {
+        font-size: 0.8rem;
+    }
+    
+    .card-header h2 {
+        font-size: 1.3rem;
+    }
+    
+    .card-header p {
+        font-size: 0.85rem;
+    }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .agent-item {
+        min-height: 48px; /* Larger touch targets */
+        cursor: default;
+    }
+    
+    .agent-item:hover {
+        transform: none;
+    }
+    
+    .agent-item:active {
+        background: #e9ecef;
+    }
+    
+    .agent-item.active:active {
+        background: #d1ecf1;
+    }
+    
+    .agent-item.completed:active {
+        background: #d4edda;
+    }
+}
+
+/* Landscape Mobile Optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+    .card-header h2 {
+        font-size: 1.2rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-header p {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+    
+    .progress-container {
+        padding: 8px;
+    }
+    
+    .agent-item {
+        padding: 6px 8px;
+        margin: 2px 0;
+        min-height: 36px;
+    }
+    
+    .agent-description {
+        display: none; /* Hide descriptions in landscape to save space */
+    }
+    
+    .validation-features {
+        margin-top: 0.5rem;
+    }
+    
+    .validation-features li {
+        margin-bottom: 0.1rem;
     }
 }
 </style>

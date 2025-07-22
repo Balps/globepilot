@@ -15,6 +15,7 @@ import re
 import io
 import sys
 from contextlib import redirect_stdout, redirect_stderr
+import json # Added for saving/loading test data
 
 # Load environment variables from .env file if it exists
 try:
@@ -29,9 +30,67 @@ from globepilot_enhanced import execute_validated_travel_workflow, extract_user_
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'globepilot-secret-key-change-in-production')
 
+# Performance optimizations
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year cache for static files
+
+# Add compression middleware (if available)
+try:
+    from flask_compress import Compress
+    Compress(app)
+except ImportError:
+    print("flask-compress not available, skipping compression middleware")
+
+# Custom static file handler for optimized assets
+@app.route('/static/<path:filename>')
+def optimized_static(filename):
+    """Serve optimized static files (minified in production)"""
+    from flask import send_from_directory, current_app
+    
+    # In production, serve minified versions
+    if not current_app.debug and not filename.endswith('.min.css') and not filename.endswith('.min.js'):
+        if filename.endswith('.css'):
+            minified_file = filename.replace('.css', '.min.css')
+            try:
+                return send_from_directory('static', minified_file, max_age=31536000)
+            except:
+                pass  # Fall back to original if minified doesn't exist
+        elif filename.endswith('.js'):
+            minified_file = filename.replace('.js', '.min.js')
+            try:
+                return send_from_directory('static', minified_file, max_age=31536000)
+            except:
+                pass  # Fall back to original if minified doesn't exist
+    
+    return send_from_directory('static', filename, max_age=31536000)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Template functions for performance
+@app.template_global()
+def asset_url(filename, version='2.5'):
+    """Generate optimized asset URLs with versioning"""
+    from flask import url_for, current_app
+    
+    # In production, use minified versions
+    if not current_app.debug:
+        if filename.endswith('.css') and not filename.endswith('.min.css'):
+            filename = filename.replace('.css', '.min.css')
+        elif filename.endswith('.js') and not filename.endswith('.min.js'):
+            filename = filename.replace('.js', '.min.js')
+    
+    return url_for('static', filename=filename, v=version)
+
+@app.template_global()
+def performance_hints():
+    """Generate performance-related HTML hints"""
+    return {
+        'preload_css': ['css/variables.css', 'css/results.css'],
+        'preload_js': ['js/results.js'],
+        'dns_prefetch': ['fonts.googleapis.com', 'maps.googleapis.com'],
+        'preconnect': ['https://fonts.gstatic.com']
+    }
 
 # Budget validation data - realistic minimums for different route types
 ROUTE_BUDGET_MINIMUMS = {
@@ -377,12 +436,12 @@ def run_async_workflow(prompt, result_storage):
         sys.stdout = ProgressCapturingLogger(workflow_tracker)
         sys.stderr = ProgressCapturingLogger(workflow_tracker) # Also capture stderr for errors
         
-        # Use enhanced production limits for web requests
+        # Production limits for full workflow execution
         production_limits = WorkflowLimits(
-            max_iterations=80,
-            max_revision_cycles=1,
-            max_api_calls=350,  # Increased from 200 to allow all 11 agents to complete (8 agents used 201 calls)
-            max_duration_minutes=15,  # Increased timeout for full 11-agent workflow
+            max_iterations=100,  # Increased to allow for web searches
+            max_revision_cycles=2,  # Increased to allow for location-specific revisions
+            max_api_calls=500,  # Increased significantly to allow for address research
+            max_duration_minutes=20,  # Increased timeout for enhanced location research
             early_termination_enabled=True
         )
         
@@ -625,56 +684,24 @@ def get_status():
     return jsonify(status_response)
 
 @app.route('/results')
-def view_results():
-    """Display the travel planning results"""
-    if not processing_status.get("results"):
-        flash('No results available. Please submit a travel planning request first.', 'warning')
+def results():
+    """Display the final travel planning results"""
+    global processing_status, workflow_tracker
+    
+    if not processing_status.get('results'):
         return redirect(url_for('index'))
     
-    results = processing_status["results"]
+    # Get Google Maps API key from environment
+    google_maps_api_key = os.getenv('GOOGLE_MAPS_API_KEY', '')
     
-    # Extract key information from results
-    itinerary = results.get("itinerary", "No itinerary created")
-    budget_analysis = results.get("budget_analysis", "No budget analysis available")
-    weather_info = results.get("weather_info", "No weather information available")
-    document_requirements = results.get("document_requirements", "No document requirements available")
-    packing_suggestions = results.get("packing_suggestions", "No packing suggestions available")
-    travel_notes = results.get("travel_notes", {})
-    plan_approval = results.get("plan_approval", {})
-    budget_validation = results.get("budget_validation", {})
-    quality_issues = results.get("quality_issues", [])
-    revision_requests = results.get("revision_requests", [])
-    
-    # DEBUG: Log itinerary content being passed to template
-    logger.info(f"📋 TEMPLATE DEBUG - Itinerary data:")
-    logger.info(f"   • Itinerary type: {type(itinerary)}")
-    logger.info(f"   • Itinerary length: {len(str(itinerary)) if itinerary else 0}")
-    logger.info(f"   • Itinerary preview: {str(itinerary)[:200]}...")
-    logger.info(f"   • Results keys: {list(results.keys())}")
-    
-    # Extract structured data if available
-    structured_data = results.get("structured_data", {})
-    structured_itinerary = structured_data.get("itinerary", None)
-    structured_accommodations = structured_data.get("accommodations", None)
-
-    # Attempt to extract budget from itinerary if dedicated analysis is not available
-    if budget_analysis == "No budget analysis available":
-        budget_analysis = extract_budget_from_itinerary(itinerary)
+    # Get results data safely
+    results_data = processing_status.get('results', {})
     
     return render_template('results.html', 
-                         itinerary=itinerary,
-                         structured_itinerary=structured_itinerary,
-                         structured_accommodations=structured_accommodations,
-                         structured_data=structured_data,
-                         budget_analysis=budget_analysis,
-                         weather_info=weather_info,
-                         document_requirements=document_requirements,
-                         packing_suggestions=packing_suggestions,
-                         travel_notes=travel_notes,
-                         plan_approval=plan_approval,
-                         budget_validation=budget_validation,
-                         quality_issues=quality_issues,
-                         revision_requests=revision_requests)
+                         **results_data,
+                         workflow_tracker=workflow_tracker,
+                         processing_status=processing_status,
+                         google_maps_api_key=google_maps_api_key)
 
 @app.route('/request_revision', methods=['POST'])
 def request_revision():
@@ -730,7 +757,7 @@ def request_revision():
     except Exception as e:
         logger.error(f"Revision request error: {e}")
         flash(f'Error processing revision request: {str(e)}', 'error')
-        return redirect(url_for('view_results'))
+        return redirect(url_for('results'))
 
 @app.route('/plan_trip_revised')
 def plan_trip_revised():
@@ -920,6 +947,106 @@ August 20-24, 2025 (4 days, 3 nights)
 def about():
     """About page explaining the system"""
     return render_template('about.html')
+
+# Development/Testing Routes
+@app.route('/save_test_data', methods=['POST'])
+def save_test_data():
+    """Save current results to a test data file for quick loading"""
+    try:
+        # Get the current processing status
+        if not processing_status.get("results"):
+            return jsonify({"success": False, "error": "No results to save"})
+        
+        # Create test data directory if it doesn't exist
+        os.makedirs('test_data', exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"test_data/travel_plan_{timestamp}.json"
+        
+        # Save the complete processing status
+        test_data = {
+            "processing_status": processing_status,
+            "workflow_tracker": workflow_tracker,
+            "timestamp": timestamp,
+            "original_request": processing_status.get("original_request", {})
+        }
+        
+        with open(filename, 'w') as f:
+            json.dump(test_data, f, indent=2, default=str)
+        
+        # Also save as 'latest' for easy access
+        with open('test_data/latest.json', 'w') as f:
+            json.dump(test_data, f, indent=2, default=str)
+        
+        return jsonify({
+            "success": True, 
+            "filename": filename,
+            "message": f"Test data saved to {filename}"
+        })
+    except Exception as e:
+        logger.error(f"Error saving test data: {str(e)}")
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/load_test_data/<filename>')
+def load_test_data(filename):
+    """Load test data from file and display results page"""
+    try:
+        # Handle special 'latest' filename
+        if filename == 'latest':
+            filepath = 'test_data/latest.json'
+        else:
+            filepath = f'test_data/{filename}'
+        
+        # Check if file exists
+        if not os.path.exists(filepath):
+            return f"Test data file not found: {filepath}", 404
+        
+        # Load the test data
+        with open(filepath, 'r') as f:
+            test_data = json.load(f)
+        
+        # Restore the global state
+        global processing_status, workflow_tracker
+        processing_status.update(test_data.get("processing_status", {}))
+        workflow_tracker.update(test_data.get("workflow_tracker", {}))
+        
+        # Redirect to results page
+        return redirect(url_for('results'))
+    except Exception as e:
+        logger.error(f"Error loading test data: {str(e)}")
+        return f"Error loading test data: {str(e)}", 500
+
+@app.route('/test_data')
+def test_data_manager():
+    """Display test data manager page"""
+    return render_template('test_data.html')
+
+@app.route('/test_data_list')
+def test_data_list():
+    """List all available test data files"""
+    try:
+        if not os.path.exists('test_data'):
+            return jsonify({"files": []})
+        
+        files = []
+        for filename in os.listdir('test_data'):
+            if filename.endswith('.json'):
+                filepath = os.path.join('test_data', filename)
+                stat = os.stat(filepath)
+                files.append({
+                    "filename": filename,
+                    "size": stat.st_size,
+                    "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                })
+        
+        # Sort by modified date, newest first
+        files.sort(key=lambda x: x["modified"], reverse=True)
+        
+        return jsonify({"files": files})
+    except Exception as e:
+        logger.error(f"Error listing test data: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.errorhandler(404)
 def not_found_error(error):

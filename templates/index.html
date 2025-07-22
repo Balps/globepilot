@@ -2,6 +2,217 @@
 
 {% block title %}Plan Your Trip - GlobePiloT{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Mobile-Responsive Form Optimizations */
+@media (max-width: 768px) {
+    /* Form Layout Mobile */
+    .row .col-md-6 {
+        margin-bottom: 1rem;
+    }
+    
+    .row .col-md-4 {
+        margin-bottom: 1rem;
+    }
+    
+    /* Form Controls Mobile Enhancement */
+    .form-control, .form-select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        padding: 14px 16px;
+        border-radius: 8px;
+        min-height: 48px; /* Touch-friendly height */
+    }
+    
+    .form-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    
+    .form-text {
+        font-size: 0.8rem;
+        margin-top: 4px;
+    }
+    
+    /* Section Headers Mobile */
+    h5.text-primary {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Budget Range Mobile */
+    .budget-range {
+        margin-bottom: 1rem;
+    }
+    
+    .budget-range input {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Travel Type Selection Mobile */
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-check-input {
+        margin-right: 8px;
+    }
+    
+    .form-check-label {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    /* Plan Trip Button Mobile */
+    .btn-primary {
+        width: 100%;
+        padding: 16px;
+        font-size: 1rem;
+        margin-top: 1rem;
+        min-height: 56px; /* Larger touch target */
+    }
+    
+    /* Feature Lists Mobile */
+    .feature-list {
+        margin-top: 1rem;
+    }
+    
+    .feature-list h6 {
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .feature-list ul {
+        font-size: 0.85rem;
+        padding-left: 1.2rem;
+    }
+    
+    .feature-list li {
+        margin-bottom: 0.25rem;
+        line-height: 1.4;
+    }
+    
+    /* Card Adjustments Mobile */
+    .card-header h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-header p {
+        font-size: 0.9rem;
+    }
+}
+
+/* Small Mobile Specific */
+@media (max-width: 576px) {
+    .card {
+        margin: 0 5px;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .card-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .card-header p {
+        font-size: 0.85rem;
+    }
+    
+    /* Form Elements Extra Small */
+    .form-control, .form-select {
+        padding: 12px 14px;
+        min-height: 44px;
+    }
+    
+    .form-label {
+        font-size: 0.85rem;
+    }
+    
+    .form-text {
+        font-size: 0.75rem;
+    }
+    
+    h5.text-primary {
+        font-size: 1rem;
+    }
+    
+    .feature-list h6 {
+        font-size: 0.9rem;
+    }
+    
+    .feature-list ul {
+        font-size: 0.8rem;
+    }
+    
+    .btn-primary {
+        font-size: 0.95rem;
+        padding: 14px;
+    }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+    
+    .form-check-input {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .btn:active {
+        transform: scale(0.98);
+    }
+}
+
+/* Landscape Mobile Optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+    .card-header {
+        padding: 0.75rem;
+    }
+    
+    .card-header h1 {
+        font-size: 1.2rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-header p {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    h5.text-primary {
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .form-control, .form-select {
+        padding: 10px 12px;
+        min-height: 40px;
+    }
+    
+    .btn-primary {
+        padding: 12px;
+        min-height: 48px;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8 col-xl-7">
@@ -219,6 +430,39 @@ Examples:
                         <div class="travel-requirement">
                             <strong>Luxury Escape</strong><br>
                             <small class="text-muted">Miami → Tokyo<br>$8,000-12,000 budget</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Developer Tools Section -->
+    <div class="row mt-5">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-tools me-2"></i>Developer Tools</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-flask me-2"></i>Test Data Manager</h6>
+                            <p class="text-muted small">Load previously saved travel plans for testing</p>
+                            <a href="/test_data" class="btn btn-warning btn-sm">
+                                <i class="fas fa-folder-open me-2"></i>View Test Data
+                            </a>
+                            <a href="/load_test_data/latest" class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-rocket me-2"></i>Load Latest
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-info-circle me-2"></i>Quick Tips</h6>
+                            <ul class="small text-muted mb-0">
+                                <li>Save results from the results page</li>
+                                <li>Load saved data to skip workflow execution</li>
+                                <li>Test UI changes without re-running AI agents</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
