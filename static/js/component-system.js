@@ -197,7 +197,8 @@ class ComponentSystem {
             'alert': this.renderAlert.bind(this),
             'modal': this.renderModal.bind(this),
             'trip-card': this.renderTripCard.bind(this),
-            'itinerary-item': this.renderItineraryItem.bind(this)
+            'itinerary-item': this.renderItineraryItem.bind(this),
+            'weather-widget': this.renderWeatherWidget.bind(this)
         };
         
         return renderers[componentName];
@@ -300,6 +301,80 @@ class ComponentSystem {
                 ${location ? `<p class="gp-itinerary-item__location">📍 ${location}</p>` : ''}
                 ${description ? `<p class="gp-itinerary-item__description">${description}</p>` : ''}
                 ${duration ? `<p class="gp-itinerary-item__duration">⏱️ ${duration}</p>` : ''}
+            </div>
+        `;
+    }
+
+    /**
+     * Alert component renderer
+     */
+    renderAlert(element, props) {
+        const { 
+            type = 'info', 
+            title = '', 
+            message = 'Alert message',
+            dismissible = false,
+            icon = ''
+        } = props;
+        
+        const icons = {
+            'info': '💡',
+            'success': '✅',
+            'warning': '⚠️',
+            'error': '❌'
+        };
+        
+        element.className = `gp-alert gp-alert--${type}${dismissible ? ' gp-alert--dismissible' : ''}`;
+        element.innerHTML = `
+            <div class="gp-alert__icon">${icon || icons[type]}</div>
+            <div class="gp-alert__content">
+                ${title ? `<div class="gp-alert__title">${title}</div>` : ''}
+                <div class="gp-alert__message">${message}</div>
+            </div>
+            ${dismissible ? `
+                <button class="gp-alert__close" onclick="this.parentElement.remove()" aria-label="Close alert">
+                    <span aria-hidden="true">×</span>
+                </button>
+            ` : ''}
+        `;
+    }
+
+    /**
+     * Weather widget component renderer
+     */
+    renderWeatherWidget(element, props) {
+        const { 
+            days = '[]'
+        } = props;
+        
+        let weatherDays = [];
+        try {
+            weatherDays = JSON.parse(days);
+        } catch (e) {
+            weatherDays = [
+                {date: 'Aug 20', icon: '☀️', temp: '72°F', desc: 'Sunny'},
+                {date: 'Aug 21', icon: '⛅', temp: '75°F', desc: 'Partly Cloudy'},
+                {date: 'Aug 22', icon: '🌦️', temp: '68°F', desc: 'Light Rain'},
+                {date: 'Aug 23', icon: '☀️', temp: '81°F', desc: 'Sunny'},
+                {date: 'Aug 24', icon: '⛅', temp: '77°F', desc: 'Partly Cloudy'}
+            ];
+        }
+        
+        element.className = 'gp-weather-widget';
+        element.innerHTML = `
+            <div class="gp-weather-widget__header">
+                <h3 class="gp-weather-widget__title">5-Day Weather Forecast</h3>
+                <span class="gp-weather-widget__location">📍 New York City</span>
+            </div>
+            <div class="gp-weather-widget__days">
+                ${weatherDays.map(day => `
+                    <div class="gp-weather-day">
+                        <div class="gp-weather-day__date">${day.date}</div>
+                        <div class="gp-weather-day__icon">${day.icon}</div>
+                        <div class="gp-weather-day__temp">${day.temp}</div>
+                        <div class="gp-weather-day__desc">${day.desc}</div>
+                    </div>
+                `).join('')}
             </div>
         `;
     }

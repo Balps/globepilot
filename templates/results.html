@@ -24,6 +24,9 @@
 <link rel="stylesheet" href="{{ asset_url('css/variables.css') }}">
 <link rel="stylesheet" href="{{ asset_url('css/results.css') }}">
 
+<!-- Modern Component System CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/component-system.css') }}">
+
 <style>
         /* NYC Adventure Widget */
         .nyc-adventure-widget {
@@ -1606,57 +1609,47 @@
                             </div>
 
             <div class="action-buttons">
-                <button class="btn btn-primary" onclick="showValidationPopup()">
-                    ✅ View Plan Status
+                <button class="gp-button" 
+                        data-component="button" 
+                        data-text="View Plan Status" 
+                        data-variant="primary" 
+                        data-icon="✅"
+                        onclick="showValidationPopup()">
+                    View Plan Status
                 </button>
-                <button class="btn btn-secondary" onclick="optimizeBudget()">
-                    🔧 Optimize Budget
+                <button class="gp-button" 
+                        data-component="button" 
+                        data-text="Optimize Budget" 
+                        data-variant="secondary" 
+                        data-icon="🔧"
+                        onclick="optimizeBudget()">
+                    Optimize Budget
                 </button>
-                <button class="btn btn-secondary" onclick="exportTrip()">
-                    📱 Export Trip
+                <button class="gp-button" 
+                        data-component="button" 
+                        data-text="Export Trip" 
+                        data-variant="secondary" 
+                        data-icon="📱"
+                        onclick="exportTrip()">
+                    Export Trip
                 </button>
                             </div>
                         </div>
                     </div>
 
     <!-- Weather Forecast Section -->
-    <div class="weather-section">
-        <div class="weather-header">
-            <span class="weather-icon">🌤️</span>
-            <h3 class="weather-title">5-Day Weather Forecast</h3>
-                </div>
-        <div class="weather-forecast">
-            <div class="weather-day">
-                <div class="weather-day-name">Aug 20</div>
-                <div class="weather-day-icon">☀️</div>
-                <div class="weather-temp">82°F</div>
-                <div class="weather-desc">Sunny</div>
-            </div>
-            <div class="weather-day">
-                <div class="weather-day-name">Aug 21</div>
-                <div class="weather-day-icon">⛅</div>
-                <div class="weather-temp">79°F</div>
-                <div class="weather-desc">Partly Cloudy</div>
-            </div>
-            <div class="weather-day">
-                <div class="weather-day-name">Aug 22</div>
-                <div class="weather-day-icon">🌧️</div>
-                <div class="weather-temp">75°F</div>
-                <div class="weather-desc">Light Rain</div>
-            </div>
-            <div class="weather-day">
-                <div class="weather-day-name">Aug 23</div>
-                <div class="weather-day-icon">☀️</div>
-                <div class="weather-temp">81°F</div>
-                <div class="weather-desc">Sunny</div>
-            </div>
-            <div class="weather-day">
-                <div class="weather-day-name">Aug 24</div>
-                <div class="weather-day-icon">⛅</div>
-                <div class="weather-temp">77°F</div>
-                <div class="weather-desc">Partly Cloudy</div>
-            </div>
-        </div>
+    <div class="gp-weather-widget" 
+         data-component="weather-widget"
+         data-days='[{"date":"Aug 20","icon":"☀️","temp":"82°F","desc":"Sunny"},{"date":"Aug 21","icon":"⛅","temp":"79°F","desc":"Partly Cloudy"},{"date":"Aug 22","icon":"🌧️","temp":"75°F","desc":"Light Rain"},{"date":"Aug 23","icon":"☀️","temp":"81°F","desc":"Sunny"},{"date":"Aug 24","icon":"⛅","temp":"77°F","desc":"Partly Cloudy"}]'>
+    </div>
+
+    <!-- Smart Alert Example -->
+    <div class="gp-alert" 
+         data-component="alert" 
+         data-type="success" 
+         data-title="Components Upgraded!" 
+         data-message="Your GlobePiloT interface now uses modern, fast-loading components for better performance." 
+         data-dismissible="true">
     </div>
 
     <!-- Main Content Grid -->
@@ -1675,7 +1668,11 @@
             </div>
 
             <nav class="tab-navigation" role="tablist" aria-label="Travel plan sections" id="tab-navigation">
-                <button class="tab-btn active" 
+                <button class="gp-button tab-btn active" 
+                        data-component="button"
+                        data-text="Itinerary"
+                        data-variant="ghost"
+                        data-icon="📅"
                         data-tab="itinerary" 
                         onclick="switchTab('itinerary')"
                         role="tab"
@@ -1683,10 +1680,13 @@
                         aria-controls="itinerary"
                         id="tab-itinerary"
                         tabindex="0">
-                    <span class="tab-icon" aria-hidden="true">📅</span>
-                    <span class="tab-text">Itinerary</span>
+                    Itinerary
                 </button>
-                <button class="tab-btn" 
+                <button class="gp-button tab-btn" 
+                        data-component="button"
+                        data-text="Map View"
+                        data-variant="ghost"
+                        data-icon="🗺️"
                         data-tab="map" 
                         onclick="switchTab('map')"
                         role="tab"
@@ -1694,10 +1694,13 @@
                         aria-controls="map"
                         id="tab-map"
                         tabindex="-1">
-                    <span class="tab-icon" aria-hidden="true">🗺️</span>
-                    <span class="tab-text">Map View</span>
+                    Map View
                 </button>
-                <button class="tab-btn" 
+                <button class="gp-button tab-btn" 
+                        data-component="button"
+                        data-text="Budget"
+                        data-variant="ghost"
+                        data-icon="💰"
                         data-tab="budget" 
                         onclick="switchTab('budget')"
                         role="tab"
@@ -1705,10 +1708,13 @@
                         aria-controls="budget"
                         id="tab-budget"
                         tabindex="-1">
-                    <span class="tab-icon" aria-hidden="true">💰</span>
-                    <span class="tab-text">Budget</span>
+                    Budget
                 </button>
-                <button class="tab-btn" 
+                <button class="gp-button tab-btn" 
+                        data-component="button"
+                        data-text="Documents"
+                        data-variant="ghost"
+                        data-icon="📋"
                         data-tab="documents" 
                         onclick="switchTab('documents')"
                         role="tab"
@@ -1716,8 +1722,7 @@
                         aria-controls="documents"
                         id="tab-documents"
                         tabindex="-1">
-                    <span class="tab-icon" aria-hidden="true">📋</span>
-                    <span class="tab-text">Documents</span>
+                    Documents
                 </button>
             </nav>
 
@@ -1740,33 +1745,57 @@
                         </div>
                         <div id="search-help" class="sr-only">Use this field to search through your travel itinerary. Results will update as you type.</div>
                         <div class="search-filters" role="group" aria-label="Filter activities by category">
-                            <button class="filter-chip active" 
+                            <button class="gp-button filter-chip active" 
+                                    data-component="button"
+                                    data-text="All"
+                                    data-variant="ghost"
+                                    data-size="sm"
                                     onclick="filterActivities('all')"
                                     aria-pressed="true"
                                     aria-label="Show all activities">All</button>
-                            <button class="filter-chip" 
+                            <button class="gp-button filter-chip" 
+                                    data-component="button"
+                                    data-text="Meals"
+                                    data-variant="ghost"
+                                    data-size="sm"
+                                    data-icon="🍽️"
                                     onclick="filterActivities('meals')"
                                     aria-pressed="false"
                                     aria-label="Show only meal activities">
-                                <span aria-hidden="true">🍽️</span> Meals
+                                Meals
                             </button>
-                            <button class="filter-chip" 
+                            <button class="gp-button filter-chip" 
+                                    data-component="button"
+                                    data-text="Attractions"
+                                    data-variant="ghost"
+                                    data-size="sm"
+                                    data-icon="🏛️"
                                     onclick="filterActivities('attractions')"
                                     aria-pressed="false"
                                     aria-label="Show only attraction activities">
-                                <span aria-hidden="true">🏛️</span> Attractions
+                                Attractions
                             </button>
-                            <button class="filter-chip" 
+                            <button class="gp-button filter-chip" 
+                                    data-component="button"
+                                    data-text="Transport"
+                                    data-variant="ghost"
+                                    data-size="sm"
+                                    data-icon="🚇"
                                     onclick="filterActivities('transport')"
                                     aria-pressed="false"
                                     aria-label="Show only transportation activities">
-                                <span aria-hidden="true">🚇</span> Transport
+                                Transport
                             </button>
-                            <button class="filter-chip" 
+                            <button class="gp-button filter-chip" 
+                                    data-component="button"
+                                    data-text="Free"
+                                    data-variant="ghost"
+                                    data-size="sm"
+                                    data-icon="💸"
                                     onclick="filterActivities('free')"
                                     aria-pressed="false"
                                     aria-label="Show only free activities">
-                                <span aria-hidden="true">💸</span> Free
+                                Free
                             </button>
                         </div>
                     </div>
@@ -3470,5 +3499,8 @@ END:VCALENDAR`;
 
 <!-- External JavaScript for better caching and performance -->
 <script src="{{ asset_url('js/results.js') }}" defer></script>
+
+<!-- Modern Component System JavaScript -->
+<script src="{{ url_for('static', filename='js/component-system.js') }}" defer></script>
 
 {% endblock %} 
