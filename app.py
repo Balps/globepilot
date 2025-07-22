@@ -68,6 +68,43 @@ def performance_hints():
         'preconnect': ['https://fonts.gstatic.com']
     }
 
+# Component system functions
+@app.template_global()
+def component(name, **kwargs):
+    """Render a component with props"""
+    try:
+        component_path = f'components/{name}.html'
+        return render_template(component_path, **kwargs)
+    except Exception as e:
+        logger.warning(f"Component '{name}' not found: {e}")
+        return f"<!-- Component '{name}' not found -->"
+
+@app.template_global()
+def component_assets(name):
+    """Load component-specific CSS and JS"""
+    return {
+        'css': url_for('static', filename=f'components/{name}/{name}.css'),
+        'js': url_for('static', filename=f'components/{name}/{name}.js')
+    }
+
+@app.template_filter('component_css')
+def component_css_filter(component_name):
+    """Template filter to include component CSS"""
+    try:
+        css_url = url_for('static', filename=f'components/{component_name}/{component_name}.css')
+        return f'<link rel="stylesheet" href="{css_url}">'
+    except:
+        return ""
+
+@app.template_filter('component_js')
+def component_js_filter(component_name):
+    """Template filter to include component JavaScript"""
+    try:
+        js_url = url_for('static', filename=f'components/{component_name}/{component_name}.js')
+        return f'<script src="{js_url}" defer></script>'
+    except:
+        return ""
+
 # Budget validation data - realistic minimums for different route types
 ROUTE_BUDGET_MINIMUMS = {
     'domestic_short': 300,      # Same state/region
@@ -952,6 +989,11 @@ August 20-24, 2025 (4 days, 3 nights)
 def about():
     """About page explaining the system"""
     return render_template('about.html')
+
+@app.route('/component-demo')
+def component_demo():
+    """Component system demonstration page"""
+    return render_template('component_demo.html')
 
 # Development/Testing Routes
 @app.route('/save_test_data', methods=['POST'])

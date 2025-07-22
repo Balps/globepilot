@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Component Demo - GlobePiloT{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">🧩 GlobePiloT Component System Demo</h1>
+            <p class="lead">Demonstrating our new modular UI component architecture</p>
+        </div>
+    </div>
+
+    <!-- Load component assets -->
+    {{ 'button' | component_css | safe }}
+    {{ 'button' | component_js | safe }}
+
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>🎨 Button Variants</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        {{ component('ui/button', 
+                            text='Primary Button', 
+                            variant='primary'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Secondary Button', 
+                            variant='secondary'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Ghost Button', 
+                            variant='ghost'
+                        ) }}
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-3">
+                        {{ component('ui/button', 
+                            text='Success', 
+                            variant='success'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Danger', 
+                            variant='danger'
+                        ) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>📏 Button Sizes</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                        {{ component('ui/button', 
+                            text='Small', 
+                            size='sm',
+                            variant='primary'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Default', 
+                            variant='primary'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Large', 
+                            size='lg',
+                            variant='primary'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Extra Large', 
+                            size='xl',
+                            variant='primary'
+                        ) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>✨ Interactive Features</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        {{ component('ui/button', 
+                            text='With Icon', 
+                            icon='✈️',
+                            variant='primary'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Loading State', 
+                            loading=true,
+                            loading_text='Processing...'
+                        ) }}
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        {{ component('ui/button', 
+                            text='Disabled', 
+                            disabled=true
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            icon='🔍',
+                            aria_label='Search',
+                            class='btn--icon-only'
+                        ) }}
+                    </div>
+                    
+                    <div class="w-100">
+                        {{ component('ui/button', 
+                            text='Full Width Button', 
+                            variant='primary',
+                            class='btn--full'
+                        ) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>🎯 Travel-Specific Usage</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        {{ component('ui/button', 
+                            text='Plan Trip', 
+                            icon='🗺️',
+                            variant='primary',
+                            size='lg',
+                            onclick='alert("Planning your trip!")'
+                        ) }}
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        {{ component('ui/button', 
+                            text='Save Itinerary', 
+                            icon='💾',
+                            variant='secondary',
+                            onclick='alert("Itinerary saved!")'
+                        ) }}
+                        
+                        {{ component('ui/button', 
+                            text='Share Trip', 
+                            icon='📤',
+                            variant='ghost',
+                            onclick='alert("Sharing trip!")'
+                        ) }}
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-3">
+                        {{ component('ui/button', 
+                            text='Book Now', 
+                            icon='🎟️',
+                            variant='success',
+                            size='lg',
+                            onclick='alert("Booking confirmed!")'
+                        ) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>💻 Code Examples</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Primary Button with Icon:</h5>
+                    <pre class="bg-light p-3 rounded"><code>{{ "{{ component('ui/button', 
+    text='Plan Trip', 
+    icon='🗺️',
+    variant='primary',
+    size='lg',
+    onclick='planTrip()'
+) }}" }}</code></pre>
+
+                    <h5 class="mt-4">Loading Button:</h5>
+                    <pre class="bg-light p-3 rounded"><code>{{ "{{ component('ui/button', 
+    text='Processing...', 
+    loading=true,
+    loading_text='Creating your itinerary...'
+) }}" }}</code></pre>
+
+                    <h5 class="mt-4">Full Width Action Button:</h5>
+                    <pre class="bg-light p-3 rounded"><code>{{ "{{ component('ui/button', 
+    text='Continue to Payment', 
+    variant='primary',
+    class='btn--full'
+) }}" }}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4 mb-5">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><strong>🚀 What's Next?</strong></h5>
+                <p class="mb-2">This is just the beginning! We can now create components for:</p>
+                <ul class="mb-0">
+                    <li><strong>Layout Components:</strong> Header, Sidebar, Footer</li>
+                    <li><strong>Form Components:</strong> Input, Select, Checkbox</li>
+                    <li><strong>Travel Components:</strong> TripCard, ItineraryWidget, WeatherWidget</li>
+                    <li><strong>Navigation Components:</strong> TabNavigation, Breadcrumb, Pagination</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Demonstrate component JavaScript functionality
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🧩 Component demo page loaded');
+    console.log('Button components automatically initialized:', 
+        document.querySelectorAll('[data-component="button"]').length);
+});
+</script>
+{% endblock %} 

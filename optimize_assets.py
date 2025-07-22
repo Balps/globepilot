@@ -68,6 +68,7 @@ def bundle_css_files():
     """Bundle multiple CSS files into one optimized file"""
     static_dir = Path('static')
     css_dir = static_dir / 'css'
+    components_dir = static_dir / 'components'
     
     if not css_dir.exists():
         return None
@@ -76,6 +77,7 @@ def bundle_css_files():
     bundle_order = ['variables.css', 'results.css']
     bundled_content = []
     
+    # Add main CSS files
     for css_file in bundle_order:
         css_path = css_dir / css_file
         if css_path.exists():
@@ -83,6 +85,17 @@ def bundle_css_files():
                 content = f.read()
                 bundled_content.append(f"/* {css_file} */")
                 bundled_content.append(content)
+    
+    # Add component CSS files
+    if components_dir.exists():
+        for component_dir in components_dir.iterdir():
+            if component_dir.is_dir():
+                css_file = component_dir / f"{component_dir.name}.css"
+                if css_file.exists():
+                    with open(css_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        bundled_content.append(f"/* Component: {component_dir.name} */")
+                        bundled_content.append(content)
     
     if bundled_content:
         full_content = '\n'.join(bundled_content)
@@ -121,22 +134,36 @@ def bundle_js_files():
     """Bundle JavaScript files with dependency order"""
     static_dir = Path('static')
     js_dir = static_dir / 'js'
+    components_dir = static_dir / 'components'
     
     if not js_dir.exists():
         return None
     
-    # Bundle JS files
+    # Bundle main JS files
     js_files = [f for f in js_dir.glob('*.js') if not f.name.startswith('bundle') and not f.name.endswith('.min.js')]
     
-    if not js_files:
-        return None
-    
     bundled_content = []
+    
+    # Add main JS files
     for js_file in js_files:
         with open(js_file, 'r', encoding='utf-8') as f:
             content = f.read()
             bundled_content.append(f"/* {js_file.name} */")
             bundled_content.append(content)
+    
+    # Add component JS files
+    if components_dir.exists():
+        for component_dir in components_dir.iterdir():
+            if component_dir.is_dir():
+                js_file = component_dir / f"{component_dir.name}.js"
+                if js_file.exists():
+                    with open(js_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        bundled_content.append(f"/* Component: {component_dir.name} */")
+                        bundled_content.append(content)
+    
+    if not bundled_content:
+        return None
     
     if bundled_content:
         full_content = '\n'.join(bundled_content)

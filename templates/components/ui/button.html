@@ -1,0 +1,20 @@
+<!-- Button Component -->
+<button 
+    class="btn btn--{{ variant or 'primary' }}{{ ' btn--' + size if size }}{{ ' btn--loading' if loading }}{{ ' ' + class if class }}"
+    type="{{ type or 'button' }}"
+    {{ 'disabled' if disabled or loading }}
+    data-component="button"
+    {% if onclick %}onclick="{{ onclick }}"{% endif %}
+    {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+    {{ attrs|safe if attrs }}
+>
+    {% if loading %}
+        <span class="btn__spinner" aria-hidden="true"></span>
+        <span class="btn__text">{{ loading_text or 'Loading...' }}</span>
+    {% else %}
+        {% if icon %}
+            <span class="btn__icon" aria-hidden="true">{{ icon }}</span>
+        {% endif %}
+        <span class="btn__text">{{ text or 'Button' }}</span>
+    {% endif %}
+</button> 
