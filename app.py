@@ -995,6 +995,11 @@ def component_demo():
     """Component system demonstration page"""
     return render_template('component_demo.html')
 
+@app.route('/modern-components')
+def modern_components():
+    """Modern Web Components demonstration page"""
+    return render_template('component_system_demo.html')
+
 # Development/Testing Routes
 @app.route('/save_test_data', methods=['POST'])
 def save_test_data():

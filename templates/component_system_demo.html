@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧩 Modern Component System Demo - GlobePiloT</title>
+    
+    <!-- Component System CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component-system.css') }}">
+    
+    <!-- Bootstrap for layout -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        body { background: #f8fafc; }
+        .demo-section { margin-bottom: 3rem; }
+        .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .code-preview { background: #1f2937; color: #e5e7eb; padding: 1rem; border-radius: 8px; font-family: 'Monaco', monospace; font-size: 0.875rem; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">🧩 Modern Component System</h1>
+            <p class="lead">Bulletproof Web Components for GlobePiloT</p>
+            <div class="alert alert-success">
+                <strong>✅ No Flask Template Complexity</strong> • 
+                <strong>✅ Auto-Initialize</strong> • 
+                <strong>✅ Hot Reload</strong> • 
+                <strong>✅ Type Safe</strong>
+            </div>
+        </div>
+
+        <!-- Button Components -->
+        <div class="demo-section">
+            <h2 class="h3 mb-4">🎨 Button Components</h2>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Variants & States</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- These will be automatically enhanced by the component system -->
+                            <div class="mb-3">
+                                <button class="gp-button" data-component="button" data-text="Primary Button" data-variant="primary">Primary Button</button>
+                                <button class="gp-button" data-component="button" data-text="Secondary" data-variant="secondary">Secondary</button>
+                                <button class="gp-button" data-component="button" data-text="Ghost" data-variant="ghost">Ghost</button>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button class="gp-button" data-component="button" data-text="Success" data-variant="success">Success</button>
+                                <button class="gp-button" data-component="button" data-text="Danger" data-variant="danger">Danger</button>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button class="gp-button" data-component="button" data-text="With Icon" data-variant="primary" data-icon="✈️">With Icon</button>
+                                <button class="gp-button" data-component="button" data-text="Loading..." data-variant="primary" data-loading="true">Loading</button>
+                                <button class="gp-button" data-component="button" data-text="Disabled" data-variant="secondary" disabled>Disabled</button>
+                            </div>
+                            
+                            <div>
+                                <button class="gp-button" data-component="button" data-text="Small" data-variant="primary" data-size="sm">Small</button>
+                                <button class="gp-button" data-component="button" data-text="Default" data-variant="primary">Default</button>
+                                <button class="gp-button" data-component="button" data-text="Large" data-variant="primary" data-size="lg">Large</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Usage Code</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="code-preview">
+&lt;!-- Automatic Enhancement --&gt;
+&lt;button class="gp-button" 
+        data-component="button" 
+        data-text="Plan Trip" 
+        data-variant="primary" 
+        data-icon="✈️"&gt;
+    Plan Trip
+&lt;/button&gt;
+
+&lt;!-- Programmatic Creation --&gt;
+&lt;script&gt;
+const btn = createComponent('button', {
+    text: 'Book Now',
+    variant: 'success', 
+    icon: '🎟️'
+});
+document.body.appendChild(btn);
+&lt;/script&gt;
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trip Cards -->
+        <div class="demo-section">
+            <h2 class="h3 mb-4">🌍 Trip Cards</h2>
+            <div class="demo-grid">
+                <div class="gp-trip-card" 
+                     data-component="trip-card"
+                     data-title="Paris Adventure"
+                     data-location="Paris, France"
+                     data-duration="7 days"
+                     data-cost="$2,500"
+                     data-description="Experience the City of Light with curated activities, fine dining, and cultural immersion.">
+                </div>
+                
+                <div class="gp-trip-card" 
+                     data-component="trip-card"
+                     data-title="Tokyo Explorer"
+                     data-location="Tokyo, Japan"
+                     data-duration="10 days"
+                     data-cost="$3,200"
+                     data-description="Modern metropolis meets ancient traditions in this comprehensive Japan experience.">
+                </div>
+                
+                <div class="gp-trip-card" 
+                     data-component="trip-card"
+                     data-title="NYC Weekend"
+                     data-location="New York City, USA"
+                     data-duration="3 days"
+                     data-cost="$1,800"
+                     data-description="The city that never sleeps awaits with Broadway shows, museums, and iconic landmarks.">
+                </div>
+            </div>
+        </div>
+
+        <!-- Itinerary Items -->
+        <div class="demo-section">
+            <h2 class="h3 mb-4">📅 Itinerary Components</h2>
+            <div class="card">
+                <div class="card-header">
+                    <h5>Day 1 - Paris Arrival</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="gp-itinerary-item" 
+                         data-component="itinerary-item"
+                         data-time="09:00"
+                         data-title="Arrival at Charles de Gaulle Airport"
+                         data-location="CDG Terminal 2E, Paris"
+                         data-type="flight"
+                         data-description="Flight AF 83 from JFK - Welcome to Paris!"
+                         data-duration="1 hour">
+                    </div>
+                    
+                    <div class="gp-itinerary-item" 
+                         data-component="itinerary-item"
+                         data-time="11:30"
+                         data-title="Transfer to Hotel"
+                         data-location="Maison Mère, 7 Rue Mayran"
+                         data-type="transport"
+                         data-cost="€70"
+                         data-description="Private transfer via RER B + Metro"
+                         data-duration="1.5 hours">
+                    </div>
+                    
+                    <div class="gp-itinerary-item" 
+                         data-component="itinerary-item"
+                         data-time="13:00"
+                         data-title="Check-in & Rest"
+                         data-location="Maison Mère Boutique Hotel"
+                         data-type="hotel"
+                         data-description="Settle in and freshen up after your journey">
+                    </div>
+                    
+                    <div class="gp-itinerary-item" 
+                         data-component="itinerary-item"
+                         data-time="15:00"
+                         data-title="Lunch at Au P'tit Grec"
+                         data-location="68 Rue Mouffetard, Latin Quarter"
+                         data-type="meal"
+                         data-cost="€25"
+                         data-description="Authentic Greek cuisine in the heart of Paris"
+                         data-duration="1 hour">
+                    </div>
+                    
+                    <div class="gp-itinerary-item" 
+                         data-component="itinerary-item"
+                         data-time="16:30"
+                         data-title="Walking Tour: Montmartre"
+                         data-location="Sacré-Cœur Basilica area"
+                         data-type="activity"
+                         data-cost="Free"
+                         data-description="Explore the artistic heart of Paris with stunning city views"
+                         data-duration="3 hours">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JavaScript Demo -->
+        <div class="demo-section">
+            <h2 class="h3 mb-4">🔧 Interactive Features</h2>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Dynamic Component Creation</h5>
+                        </div>
+                        <div class="card-body">
+                            <button class="btn btn-primary" onclick="createDynamicComponents()">
+                                Create Dynamic Components
+                            </button>
+                            <button class="btn btn-secondary" onclick="hotReloadComponents()">
+                                Hot Reload All
+                            </button>
+                            <button class="btn btn-success" onclick="updateComponentProps()">
+                                Update Props
+                            </button>
+                            
+                            <div id="dynamic-container" class="mt-3 p-3 border rounded bg-light">
+                                <p class="text-muted">Dynamic components will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Component Events</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="event-log" class="bg-dark text-light p-3 rounded" style="height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.875rem;">
+                                <div class="text-success">Component event log initialized...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Summary -->
+        <div class="demo-section">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>🚀 Why This Approach Works Better</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>✅ Advantages</h5>
+                            <ul class="mb-0">
+                                <li><strong>No Template Complexity</strong> - Pure JavaScript + CSS</li>
+                                <li><strong>Auto-Initialize</strong> - Components work immediately</li>
+                                <li><strong>Hot Reload</strong> - Update components without page refresh</li>
+                                <li><strong>Error Recovery</strong> - Individual component failures won't crash the system</li>
+                                <li><strong>Performance</strong> - Lazy initialization and efficient updates</li>
+                                <li><strong>Maintainable</strong> - Clear separation of concerns</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>🎯 Key Features</h5>
+                            <ul class="mb-0">
+                                <li><strong>Automatic Discovery</strong> - Finds components in DOM</li>
+                                <li><strong>Props System</strong> - Data attributes become component props</li>
+                                <li><strong>Event System</strong> - Custom events for component interactions</li>
+                                <li><strong>Responsive</strong> - Mobile-first design</li>
+                                <li><strong>Accessible</strong> - ARIA support and keyboard navigation</li>
+                                <li><strong>Dark Mode</strong> - Automatic dark mode support</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Component System JavaScript -->
+    <script src="{{ url_for('static', filename='js/component-system.js') }}"></script>
+    
+    <!-- Demo JavaScript -->
+    <script>
+        // Log component events
+        document.addEventListener('component:click', (e) => {
+            const log = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString();
+            const message = `[${time}] Component clicked: ${e.detail.props.text || 'Unknown'}`;
+            log.innerHTML += `<div class="text-info">${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        });
+
+        // Dynamic component creation
+        function createDynamicComponents() {
+            const container = document.getElementById('dynamic-container');
+            container.innerHTML = '';
+            
+            // Create multiple components programmatically
+            const components = [
+                createComponent('button', {
+                    'data-text': 'Dynamic Button 1',
+                    'data-variant': 'primary',
+                    'data-icon': '🎯'
+                }),
+                createComponent('button', {
+                    'data-text': 'Dynamic Button 2', 
+                    'data-variant': 'success',
+                    'data-icon': '✨'
+                })
+            ];
+            
+            components.forEach(comp => {
+                container.appendChild(comp);
+                container.appendChild(document.createTextNode(' '));
+            });
+            
+            // Create a trip card
+            const tripCard = document.createElement('div');
+            tripCard.className = 'gp-trip-card mt-3';
+            tripCard.setAttribute('data-component', 'trip-card');
+            tripCard.setAttribute('data-title', 'Dynamic Trip');
+            tripCard.setAttribute('data-location', 'Created by JavaScript');
+            tripCard.setAttribute('data-cost', '$1,000');
+            tripCard.setAttribute('data-duration', '5 days');
+            tripCard.setAttribute('data-description', 'This trip card was created dynamically!');
+            
+            container.appendChild(tripCard);
+        }
+
+        // Hot reload demonstration
+        function hotReloadComponents() {
+            if (window.ComponentSystem) {
+                window.ComponentSystem.hotReload();
+                
+                const log = document.getElementById('event-log');
+                const time = new Date().toLocaleTimeString();
+                log.innerHTML += `<div class="text-warning">[${time}] Hot reload triggered</div>`;
+                log.scrollTop = log.scrollHeight;
+            }
+        }
+
+        // Update component properties
+        function updateComponentProps() {
+            const buttons = document.querySelectorAll('.gp-button[data-component="button"]');
+            buttons.forEach((btn, index) => {
+                if (btn.updateProps) {
+                    btn.updateProps({
+                        text: `Updated ${index + 1}`,
+                        variant: ['primary', 'success', 'danger'][index % 3]
+                    });
+                }
+            });
+            
+            const log = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<div class="text-success">[${time}] Updated ${buttons.length} button props</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Show registered components
+        document.addEventListener('DOMContentLoaded', () => {
+            const log = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<div class="text-primary">[${time}] Component system loaded and ready</div>`;
+            
+            setTimeout(() => {
+                const componentCount = document.querySelectorAll('[data-component-initialized="true"]').length;
+                log.innerHTML += `<div class="text-success">[${time}] ${componentCount} components auto-initialized</div>`;
+                log.scrollTop = log.scrollHeight;
+            }, 100);
+        });
+    </script>
+</body>
+</html> 

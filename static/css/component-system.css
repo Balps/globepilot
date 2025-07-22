@@ -1,0 +1,386 @@
+/* GlobePiloT Component System - Modern CSS */
+
+/* === COMPONENT FOUNDATION === */
+:root {
+    --gp-primary: #3b82f6;
+    --gp-primary-hover: #2563eb;
+    --gp-secondary: #6b7280;
+    --gp-success: #10b981;
+    --gp-danger: #ef4444;
+    --gp-warning: #f59e0b;
+    
+    --gp-text-primary: #111827;
+    --gp-text-secondary: #6b7280;
+    --gp-text-muted: #9ca3af;
+    
+    --gp-bg-white: #ffffff;
+    --gp-bg-gray-50: #f9fafb;
+    --gp-bg-gray-100: #f3f4f6;
+    
+    --gp-border: #e5e7eb;
+    --gp-border-hover: #d1d5db;
+    
+    --gp-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --gp-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --gp-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    
+    --gp-radius: 8px;
+    --gp-radius-sm: 4px;
+    --gp-radius-lg: 12px;
+    
+    --gp-spacing-xs: 0.25rem;
+    --gp-spacing-sm: 0.5rem;
+    --gp-spacing-md: 1rem;
+    --gp-spacing-lg: 1.5rem;
+    --gp-spacing-xl: 2rem;
+}
+
+/* === BUTTON COMPONENT === */
+.gp-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gp-spacing-sm);
+    padding: var(--gp-spacing-sm) var(--gp-spacing-md);
+    border: 2px solid transparent;
+    border-radius: var(--gp-radius);
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    background: transparent;
+}
+
+.gp-button:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.gp-button:disabled,
+.gp-button--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none !important;
+}
+
+/* Button Variants */
+.gp-button--primary {
+    background: var(--gp-primary);
+    color: white;
+    box-shadow: var(--gp-shadow-sm);
+}
+
+.gp-button--primary:hover:not(:disabled):not(.gp-button--disabled) {
+    background: var(--gp-primary-hover);
+    box-shadow: var(--gp-shadow);
+    transform: translateY(-1px);
+}
+
+.gp-button--secondary {
+    background: var(--gp-bg-white);
+    color: var(--gp-text-primary);
+    border-color: var(--gp-border);
+    box-shadow: var(--gp-shadow-sm);
+}
+
+.gp-button--secondary:hover:not(:disabled):not(.gp-button--disabled) {
+    background: var(--gp-bg-gray-50);
+    border-color: var(--gp-border-hover);
+    transform: translateY(-1px);
+}
+
+.gp-button--ghost {
+    background: transparent;
+    color: var(--gp-text-secondary);
+}
+
+.gp-button--ghost:hover:not(:disabled):not(.gp-button--disabled) {
+    background: var(--gp-bg-gray-100);
+    color: var(--gp-text-primary);
+}
+
+.gp-button--success {
+    background: var(--gp-success);
+    color: white;
+}
+
+.gp-button--danger {
+    background: var(--gp-danger);
+    color: white;
+}
+
+/* Button Sizes */
+.gp-button--sm {
+    padding: var(--gp-spacing-xs) var(--gp-spacing-sm);
+    font-size: 0.75rem;
+    gap: var(--gp-spacing-xs);
+}
+
+.gp-button--lg {
+    padding: var(--gp-spacing-md) var(--gp-spacing-lg);
+    font-size: 1rem;
+    gap: var(--gp-spacing-sm);
+}
+
+.gp-button--xl {
+    padding: var(--gp-spacing-lg) var(--gp-spacing-xl);
+    font-size: 1.125rem;
+    gap: var(--gp-spacing-md);
+}
+
+/* Button States */
+.gp-button--loading {
+    pointer-events: none;
+}
+
+.gp-button--loading .gp-button__text {
+    opacity: 0.7;
+}
+
+.gp-button__spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: gp-spin 1s linear infinite;
+}
+
+.gp-button__icon {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+}
+
+.gp-button__text {
+    font-weight: inherit;
+}
+
+/* === TRIP CARD COMPONENT === */
+.gp-trip-card {
+    background: var(--gp-bg-white);
+    border-radius: var(--gp-radius-lg);
+    box-shadow: var(--gp-shadow);
+    overflow: hidden;
+    transition: all 0.2s ease;
+    border: 1px solid var(--gp-border);
+}
+
+.gp-trip-card:hover {
+    box-shadow: var(--gp-shadow-lg);
+    transform: translateY(-2px);
+}
+
+.gp-trip-card__header {
+    position: relative;
+    height: 200px;
+    background: linear-gradient(135deg, var(--gp-primary), var(--gp-success));
+}
+
+.gp-trip-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gp-trip-card__overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    color: white;
+    padding: var(--gp-spacing-lg);
+}
+
+.gp-trip-card__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 var(--gp-spacing-xs) 0;
+}
+
+.gp-trip-card__location {
+    opacity: 0.9;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.gp-trip-card__content {
+    padding: var(--gp-spacing-lg);
+}
+
+.gp-trip-card__meta {
+    display: flex;
+    gap: var(--gp-spacing-md);
+    margin-bottom: var(--gp-spacing-md);
+    font-size: 0.875rem;
+    color: var(--gp-text-secondary);
+}
+
+.gp-trip-card__description {
+    color: var(--gp-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.gp-trip-card__actions {
+    display: flex;
+    gap: var(--gp-spacing-sm);
+    padding: 0 var(--gp-spacing-lg) var(--gp-spacing-lg);
+}
+
+/* === ITINERARY ITEM COMPONENT === */
+.gp-itinerary-item {
+    display: flex;
+    gap: var(--gp-spacing-lg);
+    padding: var(--gp-spacing-lg);
+    border-bottom: 1px solid var(--gp-border);
+    transition: background-color 0.15s ease;
+}
+
+.gp-itinerary-item:hover {
+    background: var(--gp-bg-gray-50);
+}
+
+.gp-itinerary-item:last-child {
+    border-bottom: none;
+}
+
+.gp-itinerary-item__time {
+    flex-shrink: 0;
+    width: 60px;
+    font-weight: 600;
+    color: var(--gp-text-secondary);
+    font-size: 0.875rem;
+}
+
+.gp-itinerary-item__content {
+    flex: 1;
+}
+
+.gp-itinerary-item__header {
+    display: flex;
+    align-items: center;
+    gap: var(--gp-spacing-sm);
+    margin-bottom: var(--gp-spacing-xs);
+}
+
+.gp-itinerary-item__icon {
+    font-size: 1.25rem;
+}
+
+.gp-itinerary-item__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gp-text-primary);
+    margin: 0;
+    flex: 1;
+}
+
+.gp-itinerary-item__cost {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gp-success);
+    background: rgba(16, 185, 129, 0.1);
+    padding: var(--gp-spacing-xs) var(--gp-spacing-sm);
+    border-radius: var(--gp-radius-sm);
+}
+
+.gp-itinerary-item__location,
+.gp-itinerary-item__description,
+.gp-itinerary-item__duration {
+    margin: var(--gp-spacing-xs) 0 0 0;
+    font-size: 0.875rem;
+    color: var(--gp-text-secondary);
+    line-height: 1.4;
+}
+
+/* Type-specific styling */
+.gp-itinerary-item--meal {
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.gp-itinerary-item--transport {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.gp-itinerary-item--hotel {
+    background: rgba(139, 69, 19, 0.05);
+}
+
+/* === ANIMATIONS === */
+@keyframes gp-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .gp-trip-card__actions {
+        flex-direction: column;
+    }
+    
+    .gp-itinerary-item {
+        flex-direction: column;
+        gap: var(--gp-spacing-sm);
+    }
+    
+    .gp-itinerary-item__time {
+        width: auto;
+        order: 2;
+        font-size: 0.75rem;
+    }
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+    .gp-button,
+    .gp-trip-card,
+    .gp-itinerary-item {
+        transition: none;
+    }
+    
+    .gp-button__spinner {
+        animation: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    .gp-button {
+        border-width: 2px;
+    }
+    
+    .gp-button--primary {
+        border-color: currentColor;
+    }
+}
+
+/* === DARK MODE === */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --gp-text-primary: #f9fafb;
+        --gp-text-secondary: #d1d5db;
+        --gp-text-muted: #9ca3af;
+        
+        --gp-bg-white: #1f2937;
+        --gp-bg-gray-50: #374151;
+        --gp-bg-gray-100: #4b5563;
+        
+        --gp-border: #374151;
+        --gp-border-hover: #4b5563;
+    }
+    
+    .gp-button--secondary {
+        background: var(--gp-bg-white);
+        color: var(--gp-text-primary);
+        border-color: var(--gp-border);
+    }
+} 
