@@ -163,3 +163,25 @@ cython_debug/
 
 # Test data files
 test_data/ 
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cache directories
+cache/
+*.cache
+
+# Test data files
+test_data/*.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
