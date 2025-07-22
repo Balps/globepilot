@@ -62,8 +62,8 @@ def asset_url(filename, version='2.5'):
 def performance_hints():
     """Generate performance-related HTML hints"""
     return {
-        'preload_css': ['css/variables.css', 'css/results.css'],
-        'preload_js': ['js/results.js'],
+        'preload_css': ['css/variables.css'],
+        'preload_js': [],
         'dns_prefetch': ['fonts.googleapis.com', 'maps.googleapis.com'],
         'preconnect': ['https://fonts.gstatic.com']
     }
@@ -607,8 +607,8 @@ def plan_travel():
                 "original_request": request_params
             }
             
-            # Redirect to results immediately
-            return redirect(url_for('results'))
+                    # Redirect to index (results page will be rebuilt)
+        return redirect(url_for('index'))
         
         # Validate required fields
         if not all([origin, destination, departure_date, return_date, budget_min, budget_max]):
@@ -725,25 +725,7 @@ def get_status():
     
     return jsonify(status_response)
 
-@app.route('/results')
-def results():
-    """Display the final travel planning results"""
-    global processing_status, workflow_tracker
-    
-    if not processing_status.get('results'):
-        return redirect(url_for('index'))
-    
-    # Get Google Maps API key from environment
-    google_maps_api_key = os.getenv('GOOGLE_MAPS_API_KEY', '')
-    
-    # Get results data safely
-    results_data = processing_status.get('results', {})
-    
-    return render_template('results.html', 
-                         **results_data,
-                         workflow_tracker=workflow_tracker,
-                         processing_status=processing_status,
-                         google_maps_api_key=google_maps_api_key)
+# Results route removed - will be rebuilt from scratch
 
 @app.route('/request_revision', methods=['POST'])
 def request_revision():
@@ -799,7 +781,7 @@ def request_revision():
     except Exception as e:
         logger.error(f"Revision request error: {e}")
         flash(f'Error processing revision request: {str(e)}', 'error')
-        return redirect(url_for('results'))
+        return redirect(url_for('index'))
 
 @app.route('/plan_trip_revised')
 def plan_trip_revised():
@@ -1063,8 +1045,8 @@ def load_test_data(filename):
         processing_status.update(test_data.get("processing_status", {}))
         workflow_tracker.update(test_data.get("workflow_tracker", {}))
         
-        # Redirect to results page
-        return redirect(url_for('results'))
+        # Redirect to index (results page will be rebuilt) 
+        return redirect(url_for('index'))
     except Exception as e:
         logger.error(f"Error loading test data: {str(e)}")
         return f"Error loading test data: {str(e)}", 500

@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Day Itinerary Component</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1e293b;
+            line-height: 1.5;
+        }
+
+        .itinerary-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Header Section */
+        .itinerary-header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .itinerary-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-30px) rotate(10deg);
+            }
+        }
+
+        .trip-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .trip-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Global Controls */
+        .global-controls {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border: 2px solid transparent;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-chip.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .view-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .view-btn.active {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        /* Day Navigation */
+        .day-navigation {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding: 0.5rem 0;
+        }
+
+        .day-nav-item {
+            min-width: 120px;
+            padding: 1rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .day-nav-item.active {
+            border-color: #4f46e5;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .day-nav-item.completed::after {
+            content: '✓';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .day-nav-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .day-nav-date {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .day-nav-stats {
+            font-size: 0.7rem;
+            margin-top: 0.5rem;
+            opacity: 0.7;
+        }
+
+        /* Days Container */
+        .days-container {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .days-container.list-view {
+            grid-template-columns: 1fr;
+        }
+
+        .days-container.grid-view {
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        }
+
+        .days-container.compact-view .day-card {
+            padding: 1rem;
+        }
+
+        .days-container.compact-view .activity-card {
+            padding: 1rem;
+        }
+
+        /* Day Card */
+        .day-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .day-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .day-card.hidden {
+            display: none;
+        }
+
+        /* Day Header */
+        .day-header {
+            background: linear-gradient(135deg, var(--day-color-start, #4f46e5) 0%, var(--day-color-end, #7c3aed) 100%);
+            color: white;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .day-card:nth-child(1) {
+            --day-color-start: #4f46e5;
+            --day-color-end: #7c3aed;
+        }
+
+        .day-card:nth-child(2) {
+            --day-color-start: #10b981;
+            --day-color-end: #059669;
+        }
+
+        .day-card:nth-child(3) {
+            --day-color-start: #f59e0b;
+            --day-color-end: #d97706;
+        }
+
+        .day-card:nth-child(4) {
+            --day-color-start: #ef4444;
+            --day-color-end: #dc2626;
+        }
+
+        .day-card:nth-child(5) {
+            --day-color-start: #8b5cf6;
+            --day-color-end: #7c3aed;
+        }
+
+        .day-card:nth-child(6) {
+            --day-color-start: #06b6d4;
+            --day-color-end: #0891b2;
+        }
+
+        .day-card:nth-child(7) {
+            --day-color-start: #84cc16;
+            --day-color-end: #65a30d;
+        }
+
+        .day-header::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        .day-header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: relative;
+            z-index: 1;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .day-title-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .day-number {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+        }
+
+        .day-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .day-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .day-quick-stats {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-stat {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.5rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+
+        /* Activity Timeline */
+        .activities-container {
+            padding: 1.5rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .activities-container.expanded {
+            max-height: none;
+        }
+
+        .activity-timeline {
+            position: relative;
+        }
+
+        .activity-item {
+            display: flex;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .activity-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 1rem;
+            min-width: 60px;
+        }
+
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid;
+            position: relative;
+            z-index: 2;
+            flex-shrink: 0;
+        }
+
+        .timeline-dot.flight {
+            border-color: #6366f1;
+        }
+
+        .timeline-dot.hotel {
+            border-color: #8b5cf6;
+        }
+
+        .timeline-dot.meal {
+            border-color: #ef4444;
+        }
+
+        .timeline-dot.attraction {
+            border-color: #10b981;
+        }
+
+        .timeline-dot.transport {
+            border-color: #f59e0b;
+        }
+
+        .timeline-dot.shopping {
+            border-color: #ec4899;
+        }
+
+        .timeline-dot.entertainment {
+            border-color: #8b5cf6;
+        }
+
+        .timeline-time {
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #475569;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .timeline-line {
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, #e2e8f0, transparent);
+            position: absolute;
+            left: 50%;
+            top: 18px;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        .activity-item:last-child .timeline-line {
+            display: none;
+        }
+
+        .connection-icon {
+            position: absolute;
+            left: 50%;
+            top: 100%;
+            transform: translate(-50%, 8px);
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 3;
+        }
+
+        .connection-icon:hover {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+            transform: translate(-50%, 8px) scale(1.2);
+        }
+
+        /* Activity Cards */
+        .activity-card {
+            flex: 1;
+            background: #fafbfc;
+            border-radius: 16px;
+            padding: 1.25rem;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .activity-card:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-card.flight {
+            border-left-color: #6366f1;
+        }
+
+        .activity-card.hotel {
+            border-left-color: #8b5cf6;
+        }
+
+        .activity-card.meal {
+            border-left-color: #ef4444;
+        }
+
+        .activity-card.attraction {
+            border-left-color: #10b981;
+        }
+
+        .activity-card.transport {
+            border-left-color: #f59e0b;
+        }
+
+        .activity-card.shopping {
+            border-left-color: #ec4899;
+        }
+
+        .activity-card.entertainment {
+            border-left-color: #8b5cf6;
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .activity-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .activity-main-content {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .activity-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-type {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .activity-status {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .activity-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .activity-description {
+            color: #64748b;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
+        }
+
+        .activity-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .activity-price {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            min-width: 80px;
+            text-align: right;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .price-amount {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.2;
+        }
+
+        .price-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-top: 0.1rem;
+        }
+
+        /* Day Footer */
+        .day-footer {
+            padding: 1rem 1.5rem;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .day-summary {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .day-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .day-action-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.2s ease;
+        }
+
+        .day-action-btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .expand-btn {
+            background: #4f46e5 !important;
+            color: white !important;
+            border-color: #4f46e5 !important;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .days-container.grid-view {
+                grid-template-columns: 1fr;
+            }
+
+            .day-navigation {
+                gap: 0.5rem;
+            }
+
+            .day-nav-item {
+                min-width: 100px;
+                padding: 0.75rem;
+            }
+        }
+
+        /* Mobile responsive price positioning */
+        @media (max-width: 768px) {
+            .itinerary-container {
+                padding: 1rem 0.5rem;
+            }
+
+            .trip-title {
+                font-size: 2rem;
+            }
+
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-chips {
+                justify-content: center;
+            }
+
+            .day-header-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .day-quick-stats {
+                justify-content: space-between;
+            }
+
+            .activity-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .activity-header-top {
+                flex-wrap: wrap;
+            }
+
+            .activity-price {
+                align-items: flex-start;
+                margin-top: 0.5rem;
+            }
+
+            .day-footer {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+        }
+
+        /* Loading and Empty States */
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            border-left: 4px solid #10b981;
+            z-index: 1000;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+        }
+
+        .toast.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="itinerary-container">
+        <!-- Header -->
+        <div class="itinerary-header">
+            <h1 class="trip-title">🗽 New York City Adventure</h1>
+            <p class="trip-subtitle">August 20-24, 2025 • 5 Days • Solo Travel</p>
+        </div>
+
+        <!-- Global Controls -->
+        <div class="global-controls">
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input"
+                    placeholder="Search activities, restaurants, or locations across all days..." />
+            </div>
+            <div class="filter-controls">
+                <div class="filter-chips">
+                    <div class="filter-chip active" onclick="filterActivities('all', this)">All</div>
+                    <div class="filter-chip" onclick="filterActivities('meals', this)">🍽️ Meals</div>
+                    <div class="filter-chip" onclick="filterActivities('attractions', this)">🏛️ Attractions</div>
+                    <div class="filter-chip" onclick="filterActivities('transport', this)">🚇 Transport</div>
+                    <div class="filter-chip" onclick="filterActivities('free', this)">💸 Free</div>
+                </div>
+                <div class="view-controls">
+                    <button class="view-btn active" onclick="setView('list', this)">📋 List</button>
+                    <button class="view-btn" onclick="setView('grid', this)">⚏ Grid</button>
+                    <button class="view-btn" onclick="setView('compact', this)">📱 Compact</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day Navigation -->
+        <div class="day-navigation">
+            <div class="day-nav-item active completed" onclick="showDay(1, this)">
+                <div class="day-nav-number">1</div>
+                <div class="day-nav-date">Aug 20</div>
+                <div class="day-nav-stats">5 activities</div>
+            </div>
+            <div class="day-nav-item" onclick="showDay(2, this)">
+                <div class="day-nav-number">2</div>
+                <div class="day-nav-date">Aug 21</div>
+                <div class="day-nav-stats">7 activities</div>
+            </div>
+            <div class="day-nav-item" onclick="showDay(3, this)">
+                <div class="day-nav-number">3</div>
+                <div class="day-nav-date">Aug 22</div>
+                <div class="day-nav-stats">6 activities</div>
+            </div>
+            <div class="day-nav-item" onclick="showDay(4, this)">
+                <div class="day-nav-number">4</div>
+                <div class="day-nav-date">Aug 23</div>
+                <div class="day-nav-stats">8 activities</div>
+            </div>
+            <div class="day-nav-item" onclick="showDay(5, this)">
+                <div class="day-nav-number">5</div>
+                <div class="day-nav-date">Aug 24</div>
+                <div class="day-nav-stats">3 activities</div>
+            </div>
+        </div>
+
+        <!-- Days Container -->
+        <div class="days-container list-view" id="daysContainer">
+            <!-- Day 1 -->
+            <div class="day-card" data-day="1">
+                <div class="day-header">
+                    <div class="day-header-content">
+                        <div class="day-title-section">
+                            <div class="day-number">1</div>
+                            <div>
+                                <div class="day-title">Arrival & Midtown Introduction</div>
+                                <div class="day-subtitle">Friday, August 20, 2025</div>
+                            </div>
+                        </div>
+                        <div class="day-quick-stats">
+                            <div class="quick-stat">🚶‍♂️ 2.1 mi</div>
+                            <div class="quick-stat">⏰ 8 hours</div>
+                            <div class="quick-stat">💰 $355</div>
+                            <div class="quick-stat">⛅ 85°F</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="activities-container" id="activities-day1">
+                    <div class="activity-timeline">
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot flight"></div>
+                                <div class="timeline-time">06:00</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('flight')">✈️</div>
+                            </div>
+                            <div class="activity-card flight">
+                                <div class="activity-header">
+                                    <div class="activity-header-left">
+                                        <div class="activity-header-top">
+                                            <div class="activity-type">✈️ Flight</div>
+                                            <div class="activity-status"><span style="color: #10b981;">●</span>
+                                                Confirmed</div>
+                                        </div>
+                                        <div class="activity-title">San Diego → New York (JFK)</div>
+                                    </div>
+                                    <div class="activity-price">
+                                        <div class="price-amount">$260</div>
+                                        <div class="price-label">round-trip</div>
+                                    </div>
+                                </div>
+                                <div class="activity-main-content">
+                                    <div class="activity-info">
+                                        <div class="activity-description">Nonstop JetBlue flight to JFK Terminal 5.
+                                            Window seat with great views of Manhattan on approach.</div>
+                                        <div class="activity-meta">
+                                            <div class="meta-item">⏱️ 5h 45m</div>
+                                            <div class="meta-item">💺 12A</div>
+                                            <div class="meta-item">📋 ABC123</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot transport"></div>
+                                <div class="timeline-time">15:30</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('taxi')">🚕</div>
+                            </div>
+                            <div class="activity-card transport">
+                                <div class="activity-header">
+                                    <div class="activity-header-left">
+                                        <div class="activity-header-top">
+                                            <div class="activity-type">🚕 Transfer</div>
+                                            <div class="activity-status"><span style="color: #f59e0b;">●</span> Pending
+                                            </div>
+                                        </div>
+                                        <div class="activity-title">JFK → DoubleTree Chelsea</div>
+                                    </div>
+                                    <div class="activity-price">
+                                        <div class="price-amount">$70</div>
+                                        <div class="price-label">flat rate</div>
+                                    </div>
+                                </div>
+                                <div class="activity-main-content">
+                                    <div class="activity-info">
+                                        <div class="activity-description">Yellow cab transfer from JFK to hotel. Fixed
+                                            rate includes tolls and tip.</div>
+                                        <div class="activity-meta">
+                                            <div class="meta-item">⏱️ 45 min</div>
+                                            <div class="meta-item">📍 128 W 29th St</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot hotel"></div>
+                                <div class="timeline-time">16:00</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('walking')">🚶‍♂️</div>
+                            </div>
+                            <div class="activity-card hotel">
+                                <div class="activity-header">
+                                    <div class="activity-header-left">
+                                        <div class="activity-header-top">
+                                            <div class="activity-type">🏨 Hotel</div>
+                                            <div class="activity-status"><span style="color: #10b981;">●</span> Reserved
+                                            </div>
+                                        </div>
+                                        <div class="activity-title">DoubleTree by Hilton Chelsea</div>
+                                    </div>
+                                    <div class="activity-price">
+                                        <div class="price-amount">$220</div>
+                                        <div class="price-label">per night</div>
+                                    </div>
+                                </div>
+                                <div class="activity-main-content">
+                                    <div class="activity-info">
+                                        <div class="activity-description">Modern hotel in Chelsea with king bed room.
+                                            Free Wi-Fi, fitness center, and welcome cookies!</div>
+                                        <div class="activity-meta">
+                                            <div class="meta-item">🛏️ King bed</div>
+                                            <div class="meta-item">📋 HTL456</div>
+                                            <div class="meta-item">📞 212-564-0994</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot attraction"></div>
+                                <div class="timeline-time">17:00</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('walking')">🚶‍♂️</div>
+                            </div>
+                            <div class="activity-card attraction">
+                                <div class="activity-header">
+                                    <div class="activity-header-left">
+                                        <div class="activity-header-top">
+                                            <div class="activity-type">🏛️ Sightseeing</div>
+                                            <div class="activity-status"><span style="color: #f59e0b;">●</span>
+                                                Suggested</div>
+                                        </div>
+                                        <div class="activity-title">Times Square & Bryant Park</div>
+                                    </div>
+                                    <div class="activity-price">
+                                        <div class="price-amount">Free</div>
+                                        <div class="price-label">public</div>
+                                    </div>
+                                </div>
+                                <div class="activity-main-content">
+                                    <div class="activity-info">
+                                        <div class="activity-description">Experience the bright lights and energy of
+                                            Times Square, then relax in nearby Bryant Park.</div>
+                                        <div class="activity-meta">
+                                            <div class="meta-item">⏱️ 2 hours</div>
+                                            <div class="meta-item">📸 Photo ops</div>
+                                            <div class="meta-item">🚶‍♂️ 0.8 mi</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot meal"></div>
+                                <div class="timeline-time">19:30</div>
+                                <div class="timeline-line"></div>
+                            </div>
+                            <div class="activity-card meal">
+                                <div class="activity-header">
+                                    <div class="activity-header-left">
+                                        <div class="activity-header-top">
+                                            <div class="activity-type">🍽️ Dinner</div>
+                                            <div class="activity-status"><span style="color: #10b981;">●</span> Reserved
+                                            </div>
+                                        </div>
+                                        <div class="activity-title">Valerie Restaurant</div>
+                                    </div>
+                                    <div class="activity-price">
+                                        <div class="price-amount">$45</div>
+                                        <div class="price-label">dinner</div>
+                                    </div>
+                                </div>
+                                <div class="activity-main-content">
+                                    <div class="activity-info">
+                                        <div class="activity-description">Modern American cuisine in the heart of
+                                            Midtown. Great atmosphere for your first NYC dinner.</div>
+                                        <div class="activity-meta">
+                                            <div class="meta-item">🍷 Wine list</div>
+                                            <div class="meta-item">👔 Smart casual</div>
+                                            <div class="meta-item">📞 212-302-4545</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="day-footer">
+                    <div class="day-summary">
+                        <span><strong>5</strong> activities</span>
+                        <span><strong>$355</strong> total cost</span>
+                        <span><strong>60 min</strong> walking</span>
+                    </div>
+                    <div class="day-actions">
+                        <button class="day-action-btn">📊 View Details</button>
+                        <button class="day-action-btn expand-btn" onclick="toggleExpand('activities-day1', this)">Expand
+                            All</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 2 -->
+            <div class="day-card" data-day="2">
+                <div class="day-header">
+                    <div class="day-header-content">
+                        <div class="day-title-section">
+                            <div class="day-number">2</div>
+                            <div>
+                                <div class="day-title">Chelsea Market & High Line</div>
+                                <div class="day-subtitle">Saturday, August 21, 2025</div>
+                            </div>
+                        </div>
+                        <div class="day-quick-stats">
+                            <div class="quick-stat">🚶‍♂️ 3.2 mi</div>
+                            <div class="quick-stat">⏰ 9 hours</div>
+                            <div class="quick-stat">💰 $164</div>
+                            <div class="quick-stat">☀️ 87°F</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="activities-container" id="activities-day2">
+                    <div class="activity-timeline">
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot meal"></div>
+                                <div class="timeline-time">08:00</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('walking')">🚶‍♂️</div>
+                            </div>
+                            <div class="activity-card meal">
+                                <div class="activity-price">
+                                    <div class="price-amount">$15</div>
+                                    <div class="price-label">breakfast</div>
+                                </div>
+                                <div class="activity-header">
+                                    <div class="activity-type">☕ Breakfast</div>
+                                    <div class="activity-status"><span style="color: #f59e0b;">●</span> Suggested</div>
+                                </div>
+                                <div class="activity-title">Local Coffee Shop</div>
+                                <div class="activity-description">Grab a quick breakfast and coffee before your food
+                                    tour adventure.</div>
+                                <div class="activity-meta">
+                                    <div class="meta-item">⏱️ 30 min</div>
+                                    <div class="meta-item">☕ Coffee</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot attraction"></div>
+                                <div class="timeline-time">10:00</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('walking')">🚶‍♂️</div>
+                            </div>
+                            <div class="activity-card attraction">
+                                <div class="activity-price">
+                                    <div class="price-amount">$79</div>
+                                    <div class="price-label">tour</div>
+                                </div>
+                                <div class="activity-header">
+                                    <div class="activity-type">🍴 Food Tour</div>
+                                    <div class="activity-status"><span style="color: #10b981;">●</span> Booked</div>
+                                </div>
+                                <div class="activity-title">Chelsea Market & High Line Food Tour</div>
+                                <div class="activity-description">Guided tasting experience with 6+ food stops. Perfect
+                                    introduction to NYC's culinary scene.</div>
+                                <div class="activity-meta">
+                                    <div class="meta-item">⏱️ 3 hours</div>
+                                    <div class="meta-item">👥 Group tour</div>
+                                    <div class="meta-item">🎫 Advance booking</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot attraction"></div>
+                                <div class="timeline-time">13:30</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('walking')">🚶‍♂️</div>
+                            </div>
+                            <div class="activity-card attraction">
+                                <div class="activity-price">
+                                    <div class="price-amount">Free</div>
+                                    <div class="price-label">public park</div>
+                                </div>
+                                <div class="activity-header">
+                                    <div class="activity-type">🌿 Walking</div>
+                                    <div class="activity-status"><span style="color: #10b981;">●</span> Always open
+                                    </div>
+                                </div>
+                                <div class="activity-title">High Line Park Stroll</div>
+                                <div class="activity-description">Walk the elevated park with city views, art
+                                    installations, and unique perspective of NYC.</div>
+                                <div class="activity-meta">
+                                    <div class="meta-item">⏱️ 90 min</div>
+                                    <div class="meta-item">📸 Instagram worthy</div>
+                                    <div class="meta-item">🌿 Green space</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot shopping"></div>
+                                <div class="timeline-time">15:00</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('walking')">🚶‍♂️</div>
+                            </div>
+                            <div class="activity-card shopping">
+                                <div class="activity-price">
+                                    <div class="price-amount">$50</div>
+                                    <div class="price-label">shopping</div>
+                                </div>
+                                <div class="activity-header">
+                                    <div class="activity-type">🛍️ Shopping</div>
+                                    <div class="activity-status"><span style="color: #f59e0b;">●</span> Optional</div>
+                                </div>
+                                <div class="activity-title">Hudson Yards Shopping</div>
+                                <div class="activity-description">Explore the newest shopping destination with unique
+                                    stores and The Vessel landmark.</div>
+                                <div class="activity-meta">
+                                    <div class="meta-item">⏱️ 2 hours</div>
+                                    <div class="meta-item">🏬 Mall</div>
+                                    <div class="meta-item">📸 The Vessel</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot meal"></div>
+                                <div class="timeline-time">17:30</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('subway')">🚇</div>
+                            </div>
+                            <div class="activity-card meal">
+                                <div class="activity-price">
+                                    <div class="price-amount">$25</div>
+                                    <div class="price-label">casual</div>
+                                </div>
+                                <div class="activity-header">
+                                    <div class="activity-type">🍕 Snack</div>
+                                    <div class="activity-status"><span style="color: #f59e0b;">●</span> Flexible</div>
+                                </div>
+                                <div class="activity-title">Joe's Pizza</div>
+                                <div class="activity-description">Classic NYC pizza slice - a must-try authentic
+                                    experience.</div>
+                                <div class="activity-meta">
+                                    <div class="meta-item">⏱️ 30 min</div>
+                                    <div class="meta-item">🍕 NY style</div>
+                                    <div class="meta-item">💳 Cash preferred</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot entertainment"></div>
+                                <div class="timeline-time">19:00</div>
+                                <div class="timeline-line"></div>
+                                <div class="connection-icon" onclick="showDirections('walking')">🚶‍♂️</div>
+                            </div>
+                            <div class="activity-card entertainment">
+                                <div class="activity-price">
+                                    <div class="price-amount">$85</div>
+                                    <div class="price-label">show</div>
+                                </div>
+                                <div class="activity-header">
+                                    <div class="activity-type">🎭 Entertainment</div>
+                                    <div class="activity-status"><span style="color: #10b981;">●</span> Tickets held
+                                    </div>
+                                </div>
+                                <div class="activity-title">Off-Broadway Show</div>
+                                <div class="activity-description">Intimate theater experience showcasing NYC's
+                                    incredible performing arts scene.</div>
+                                <div class="activity-meta">
+                                    <div class="meta-item">⏱️ 2.5 hours</div>
+                                    <div class="meta-item">🎫 Orchestra seats</div>
+                                    <div class="meta-item">👔 Smart casual</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="timeline-section">
+                                <div class="timeline-dot meal"></div>
+                                <div class="timeline-time">22:00</div>
+                                <div class="timeline-line"></div>
+                            </div>
+                            <div class="activity-card meal">
+                                <div class="activity-price">
+                                    <div class="price-amount">$35</div>
+                                    <div class="price-label">late dinner</div>
+                                </div>
+                                <div class="activity-header">
+                                    <div class="activity-type">🌙 Late Dinner</div>
+                                    <div class="activity-status"><span style="color: #f59e0b;">●</span> Walk-in</div>
+                                </div>
+                                <div class="activity-title">Late Night Bistro</div>
+                                <div class="activity-description">Cozy neighborhood spot perfect for unwinding after the
+                                    show.</div>
+                                <div class="activity-meta">
+                                    <div class="meta-item">⏱️ 90 min</div>
+                                    <div class="meta-item">🍷 Wine bar</div>
+                                    <div class="meta-item">🌙 Open late</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="day-footer">
+                    <div class="day-summary">
+                        <span><strong>7</strong> activities</span>
+                        <span><strong>$289</strong> total cost</span>
+                        <span><strong>105 min</strong> walking</span>
+                    </div>
+                    <div class="day-actions">
+                        <button class="day-action-btn">📊 View Details</button>
+                        <button class="day-action-btn expand-btn" onclick="toggleExpand('activities-day2', this)">Expand
+                            All</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 3 (Compact example) -->
+            <div class="day-card" data-day="3">
+                <div class="day-header">
+                    <div class="day-header-content">
+                        <div class="day-title-section">
+                            <div class="day-number">3</div>
+                            <div>
+                                <div class="day-title">Museums & Central Park</div>
+                                <div class="day-subtitle">Sunday, August 22, 2025</div>
+                            </div>
+                        </div>
+                        <div class="day-quick-stats">
+                            <div class="quick-stat">🚶‍♂️ 4.1 mi</div>
+                            <div class="quick-stat">⏰ 8 hours</div>
+                            <div class="quick-stat">💰 $210</div>
+                            <div class="quick-stat">🌩️ 88°F</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="activities-container" id="activities-day3">
+                    <div class="empty-state">
+                        <div class="empty-icon">🗓️</div>
+                        <h3>Day 3 Activities Loading...</h3>
+                        <p>This day includes visits to MoMA, Central Park, and more amazing experiences.</p>
+                    </div>
+                </div>
+
+                <div class="day-footer">
+                    <div class="day-summary">
+                        <span><strong>6</strong> activities</span>
+                        <span><strong>$210</strong> estimated cost</span>
+                        <span><strong>125 min</strong> walking</span>
+                    </div>
+                    <div class="day-actions">
+                        <button class="day-action-btn">📊 View Details</button>
+                        <button class="day-action-btn expand-btn" onclick="toggleExpand('activities-day3', this)">Expand
+                            All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentView = 'list';
+        let currentFilter = 'all';
+        let expandedDays = new Set();
+
+        // Toast notification system
+        function showToast(message, type = 'success') {
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach(toast => toast.remove());
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+            const title = type === 'success' ? 'Success' : type === 'warning' ? 'Notice' : 'Error';
+
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.25rem;">${icon}</span>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem; color: #1e293b;">${title}</div>
+                        <div style="font-size: 0.875rem; color: #64748b;">${message}</div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Day navigation
+        function showDay(dayNumber, element) {
+            // Remove active class from all nav items
+            document.querySelectorAll('.day-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Add active class to clicked item
+            element.classList.add('active');
+
+            // Show specific day or all days
+            const dayCards = document.querySelectorAll('.day-card');
+            if (dayNumber === 'all') {
+                dayCards.forEach(card => card.classList.remove('hidden'));
+                showToast('Showing all days', 'success');
+            } else {
+                dayCards.forEach(card => {
+                    if (card.dataset.day == dayNumber) {
+                        card.classList.remove('hidden');
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+                showToast(`Showing Day ${dayNumber}`, 'success');
+            }
+        }
+
+        // View controls
+        function setView(view, element) {
+            currentView = view;
+
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+
+            // Update container class
+            const container = document.getElementById('daysContainer');
+            container.className = `days-container ${view}-view`;
+
+            showToast(`Switched to ${view} view`, 'success');
+        }
+
+        // Filter activities
+        function filterActivities(type, element) {
+            currentFilter = type;
+
+            // Update filter chips
+            document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+            element.classList.add('active');
+
+            // Filter logic would go here
+            showToast(`Filtering by: ${type === 'all' ? 'All activities' : type}`, 'success');
+        }
+
+        // Expand/collapse day activities
+        function toggleExpand(containerId, button) {
+            const container = document.getElementById(containerId);
+            const isExpanded = expandedDays.has(containerId);
+
+            if (isExpanded) {
+                container.classList.remove('expanded');
+                button.textContent = 'Expand All';
+                expandedDays.delete(containerId);
+                showToast('Activities collapsed', 'success');
+            } else {
+                container.classList.add('expanded');
+                button.textContent = 'Collapse';
+                expandedDays.add(containerId);
+                showToast('Activities expanded', 'success');
+            }
+        }
+
+        // Directions modal
+        function showDirections(transportType) {
+            const messages = {
+                'flight': 'Opening flight tracking and gate information',
+                'taxi': 'Getting turn-by-turn taxi directions with traffic updates',
+                'walking': 'Showing pedestrian route with safety tips',
+                'subway': 'Loading subway map with real-time schedules'
+            };
+
+            showToast(messages[transportType] || 'Loading directions...', 'success');
+        }
+
+        // Search functionality
+        const searchInput = document.querySelector('.search-input');
+        let searchTimeout;
+
+        searchInput.addEventListener('input', function (e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (e.target.value.length > 2) {
+                    showToast(`Searching for "${e.target.value}" across all days...`, 'success');
+                }
+            }, 500);
+        });
+
+        // Activity card interactions
+        document.querySelectorAll('.activity-card').forEach(card => {
+            card.addEventListener('click', function (e) {
+                if (!e.target.closest('.activity-price') && !e.target.closest('.connection-icon')) {
+                    const title = this.querySelector('.activity-title').textContent;
+                    showToast(`Opening details for: ${title}`, 'success');
+                }
+            });
+        });
+
+        // Initialize view
+        document.addEventListener('DOMContentLoaded', function () {
+            // Show welcome message
+            setTimeout(() => {
+                showToast('Your 5-day NYC itinerary is ready! Use filters and views to customize your experience.', 'success');
+            }, 1000);
+
+            // Add "Show All" option to day navigation
+            const dayNav = document.querySelector('.day-navigation');
+            const showAllBtn = document.createElement('div');
+            showAllBtn.className = 'day-nav-item';
+            showAllBtn.innerHTML = `
+                <div class="day-nav-number">All</div>
+                <div class="day-nav-date">Aug 20-24</div>
+                <div class="day-nav-stats">29 activities</div>
+            `;
+            showAllBtn.onclick = () => showDay('all', showAllBtn);
+            dayNav.appendChild(showAllBtn);
+        });
+
+        // Responsive day navigation scroll
+        const dayNavigation = document.querySelector('.day-navigation');
+        let isScrolling = false;
+
+        dayNavigation.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                window.requestAnimationFrame(() => {
+                    // Add scroll indicators or snap behavior here if needed
+                    isScrolling = false;
+                });
+                isScrolling = true;
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function (e) {
+            // Numbers 1-5 for day navigation
+            if (e.key >= '1' && e.key <= '5' && !e.target.matches('input')) {
+                const dayNum = parseInt(e.key);
+                const navItem = document.querySelector(`.day-nav-item:nth-child(${dayNum})`);
+                if (navItem) {
+                    showDay(dayNum, navItem);
+                }
+            }
+
+            // 'A' for show all
+            if (e.key.toLowerCase() === 'a' && !e.target.matches('input')) {
+                const showAllBtn = document.querySelector('.day-nav-item:last-child');
+                if (showAllBtn) {
+                    showDay('all', showAllBtn);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
