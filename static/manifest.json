@@ -1,6 +1,10 @@
 {
-  "generated": "2025-07-22T00:08:28.447893",
+  "generated": "2025-07-22T00:41:27.473248",
   "assets": {
+    "css/component-system.css": {
+      "hash": "af6f9298",
+      "size": 11163
+    },
     "css/variables.css": {
       "hash": "5187ae12",
       "size": 7493
@@ -17,17 +21,21 @@
       "hash": "c79f5903",
       "size": 28701
     },
-    "js/bundle.40c5566d.min.js": {
-      "hash": "7f3fac4e",
-      "size": 31717
-    },
     "js/results.js": {
       "hash": "4c16fb87",
       "size": 39541
     },
-    "js/bundle.40c5566d.js": {
-      "hash": "40c5566d",
-      "size": 49559
+    "js/bundle.f045d5a3.js": {
+      "hash": "f045d5a3",
+      "size": 65101
+    },
+    "js/bundle.f045d5a3.min.js": {
+      "hash": "5c3eddf3",
+      "size": 41800
+    },
+    "js/component-system.js": {
+      "hash": "d46b2fd9",
+      "size": 15515
     },
     "components/button/button.css": {
       "hash": "b353bce2",
