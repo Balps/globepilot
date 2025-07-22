@@ -191,10 +191,15 @@ def cleanup_old_bundles():
         # Remove old bundle files
         old_bundles = list(dir_path.glob('bundle.*'))
         for bundle in old_bundles:
-            bundle.unlink()
-            gz_file = Path(f"{bundle}.gz")
-            if gz_file.exists():
-                gz_file.unlink()
+            try:
+                if bundle.exists():
+                    bundle.unlink()
+                gz_file = Path(f"{bundle}.gz")
+                if gz_file.exists():
+                    gz_file.unlink()
+            except FileNotFoundError:
+                # File already removed, continue
+                pass
 
 def create_manifest():
     """Create asset manifest for cache busting"""

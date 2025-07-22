@@ -37,28 +37,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'globepilot-secret-key-change-in-p
 # Initialize all performance optimizations
 app = initialize_performance_optimizations(app)
 
-# Custom static file handler for optimized assets
-@app.route('/static/<path:filename>')
-def optimized_static(filename):
-    """Serve optimized static files (minified in production)"""
-    from flask import send_from_directory, current_app
-    
-    # In production, serve minified versions
-    if not current_app.debug and not filename.endswith('.min.css') and not filename.endswith('.min.js'):
-        if filename.endswith('.css'):
-            minified_file = filename.replace('.css', '.min.css')
-            try:
-                return send_from_directory('static', minified_file, max_age=31536000)
-            except:
-                pass  # Fall back to original if minified doesn't exist
-        elif filename.endswith('.js'):
-            minified_file = filename.replace('.js', '.min.js')
-            try:
-                return send_from_directory('static', minified_file, max_age=31536000)
-            except:
-                pass  # Fall back to original if minified doesn't exist
-    
-    return send_from_directory('static', filename, max_age=31536000)
+# Static file handling is now managed by performance_optimizations.py
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -552,6 +531,8 @@ def index():
 @app.route('/plan', methods=['POST'])
 def plan_travel():
     """Process travel planning request with intelligent caching"""
+    global processing_status
+    
     try:
         # Get form data
         origin = request.form.get('origin', '').strip()
@@ -582,7 +563,6 @@ def plan_travel():
         if cached_results and not request.form.get('force_refresh'):
             logger.info(f"🚀 Serving cached travel results for {origin} → {destination}")
             
-            global processing_status
             processing_status = {
                 "is_processing": False,
                 "progress": "Complete (from cache)",
@@ -657,7 +637,6 @@ def plan_travel():
         logger.info(f"   • Prompt preview: {prompt[:200]}...")
         
         # Reset processing status and progress tracking
-        global processing_status
         reset_workflow_tracker()
         processing_status = {
             "is_processing": True, 
