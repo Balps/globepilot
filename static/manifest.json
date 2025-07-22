@@ -1,9 +1,13 @@
 {
-  "generated": "2025-07-21T23:46:08.668806",
+  "generated": "2025-07-21T23:57:39.487705",
   "assets": {
     "css/variables.min.css": {
       "hash": "392d25d6",
       "size": 4966
+    },
+    "css/bundle.a8de3578.min.css": {
+      "hash": "5bbb9a44",
+      "size": 25454
     },
     "css/results.min.css": {
       "hash": "bb55dbc7",
@@ -13,17 +17,13 @@
       "hash": "5187ae12",
       "size": 7493
     },
-    "css/bundle.9b87e890.css": {
-      "hash": "9b87e890",
-      "size": 34493
-    },
     "css/results.css": {
-      "hash": "b5fcc95b",
-      "size": 26961
+      "hash": "f2e0e05e",
+      "size": 26957
     },
-    "css/bundle.9b87e890.min.css": {
-      "hash": "a0ee8196",
-      "size": 25458
+    "css/bundle.a8de3578.css": {
+      "hash": "a8de3578",
+      "size": 34489
     },
     "js/results.js": {
       "hash": "4c16fb87",
