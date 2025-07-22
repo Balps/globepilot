@@ -27,18 +27,15 @@ except ImportError:
 # Import the GlobePiloT system
 from globepilot_enhanced import execute_validated_travel_workflow, extract_user_budget, WorkflowLimits
 
+# Import performance modules
+from cache_manager import cache_manager
+from performance_optimizations import initialize_performance_optimizations
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'globepilot-secret-key-change-in-production')
 
-# Performance optimizations
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year cache for static files
-
-# Add compression middleware (if available)
-try:
-    from flask_compress import Compress
-    Compress(app)
-except ImportError:
-    print("flask-compress not available, skipping compression middleware")
+# Initialize all performance optimizations
+app = initialize_performance_optimizations(app)
 
 # Custom static file handler for optimized assets
 @app.route('/static/<path:filename>')
@@ -475,11 +472,17 @@ def run_async_workflow(prompt, result_storage):
         workflow_tracker["completed_agents"] = list(AGENT_CONFIG.keys())
         workflow_tracker["current_agent"] = None
         
-        # Clear the progress callback
-        
         result_storage["results"] = result
         result_storage["is_processing"] = False
         result_storage["progress"] = "Complete"
+        
+        # Cache the results if successful
+        if result and result_storage.get("original_request"):
+            try:
+                cache_manager.cache_travel_results(result_storage["original_request"], result)
+                logger.info("✅ Travel results cached successfully")
+            except Exception as cache_error:
+                logger.warning(f"Failed to cache results: {cache_error}")
         
         loop.close()
         
@@ -548,7 +551,7 @@ def index():
 
 @app.route('/plan', methods=['POST'])
 def plan_travel():
-    """Process travel planning request"""
+    """Process travel planning request with intelligent caching"""
     try:
         # Get form data
         origin = request.form.get('origin', '').strip()
@@ -560,6 +563,35 @@ def plan_travel():
         travelers = request.form.get('travelers', '1').strip()
         trip_type = request.form.get('trip_type', 'leisure').strip()
         special_requirements = request.form.get('special_requirements', '').strip()
+        
+        # Create request parameters for caching
+        request_params = {
+            'origin': origin,
+            'destination': destination,
+            'departure_date': departure_date,
+            'return_date': return_date,
+            'budget_min': budget_min,
+            'budget_max': budget_max,
+            'travelers': travelers,
+            'trip_type': trip_type,
+            'special_requirements': special_requirements
+        }
+        
+        # Check for cached results first (speeds up repeated requests)
+        cached_results = cache_manager.get_cached_travel_results(request_params)
+        if cached_results and not request.form.get('force_refresh'):
+            logger.info(f"🚀 Serving cached travel results for {origin} → {destination}")
+            
+            global processing_status
+            processing_status = {
+                "is_processing": False,
+                "progress": "Complete (from cache)",
+                "results": cached_results,
+                "original_request": request_params
+            }
+            
+            # Redirect to results immediately
+            return redirect(url_for('results'))
         
         # Validate required fields
         if not all([origin, destination, departure_date, return_date, budget_min, budget_max]):
@@ -651,17 +683,11 @@ def plan_travel():
         thread.start()
         
         # Store request details for the results page
-        request_details = {
-            "origin": origin,
-            "destination": destination,
-            "departure_date": departure_date,
-            "return_date": return_date,
+        request_details = request_params.copy()
+        request_details.update({
             "budget_range": f"${budget_min} - ${budget_max}",
-            "travelers": travelers,
-            "trip_type": trip_type,
-            "special_requirements": special_requirements,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+        })
         
         return render_template('processing.html', request_details=request_details)
         
@@ -1047,6 +1073,28 @@ def test_data_list():
     except Exception as e:
         logger.error(f"Error listing test data: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+# Performance monitoring endpoints
+@app.route('/performance/stats')
+def performance_stats():
+    """Get performance statistics"""
+    stats = cache_manager.get_cache_stats()
+    return jsonify({
+        'cache_stats': stats,
+        'server_info': {
+            'python_version': sys.version,
+            'flask_env': app.config.get('ENV', 'development')
+        }
+    })
+
+@app.route('/performance/cache/clear')
+def clear_cache():
+    """Clear all cache for better performance testing"""
+    try:
+        cache_manager.clear_all()
+        return jsonify({'success': True, 'message': 'Cache cleared successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.errorhandler(404)
 def not_found_error(error):

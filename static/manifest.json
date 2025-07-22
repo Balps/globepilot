@@ -1,0 +1,45 @@
+{
+  "generated": "2025-07-21T23:35:08.105597",
+  "assets": {
+    "css/variables.min.css": {
+      "hash": "392d25d6",
+      "size": 4966
+    },
+    "css/results.min.css": {
+      "hash": "bb55dbc7",
+      "size": 20492
+    },
+    "css/variables.css": {
+      "hash": "5187ae12",
+      "size": 7493
+    },
+    "css/bundle.9b87e890.css": {
+      "hash": "9b87e890",
+      "size": 34493
+    },
+    "css/results.css": {
+      "hash": "b5fcc95b",
+      "size": 26961
+    },
+    "css/bundle.9b87e890.min.css": {
+      "hash": "a0ee8196",
+      "size": 25458
+    },
+    "js/results.js": {
+      "hash": "4c16fb87",
+      "size": 39541
+    },
+    "js/results.min.js": {
+      "hash": "e9506fe8",
+      "size": 26069
+    },
+    "js/bundle.df24d5f6.js": {
+      "hash": "df24d5f6",
+      "size": 39558
+    },
+    "js/bundle.df24d5f6.min.js": {
+      "hash": "4fb70a8e",
+      "size": 25610
+    }
+  }
+}
